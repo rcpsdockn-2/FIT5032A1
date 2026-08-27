@@ -170,6 +170,12 @@ p {
   text-transform: uppercase;
 }
 
+.saved-summary {
+  flex-shrink: 0;
+  color: #d8e9f4;
+  font-size: 0.82rem;
+}
+
 .page-content {
   padding: clamp(32px, 5vw, 68px) clamp(20px, 6vw, 84px) 72px;
 }
@@ -570,6 +576,10 @@ p {
     margin-left: auto;
   }
 
+  .saved-summary {
+    margin-left: auto;
+  }
+
   .page-heading {
     align-items: flex-start;
     flex-direction: column;
@@ -600,6 +610,11 @@ p {
   .prototype-label {
     width: 100%;
     margin-left: 0;
+    text-align: center;
+  }
+
+  .saved-summary {
+    width: 100%;
     text-align: center;
   }
 

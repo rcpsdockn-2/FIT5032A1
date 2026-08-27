@@ -12,8 +12,10 @@ const selectedCategory = ref('All')
 const searchError = ref('')
 const searchNotice = ref('')
 const savedGuideIds = ref([])
+const savedEventIds = ref([])
 
 const savedGuidesStorageKey = 'cyclewise-saved-guides'
+const savedEventsStorageKey = 'cyclewise-saved-events'
 
 const filteredGuides = computed(() => {
   const search = searchTerm.value.trim().toLowerCase()
@@ -33,6 +35,8 @@ const filteredGuides = computed(() => {
     return matchesCategory && (!search || searchableText.includes(search))
   })
 })
+
+const savedCount = computed(() => savedGuideIds.value.length + savedEventIds.value.length)
 
 function handleSearch() {
   searchError.value = ''
@@ -73,11 +77,31 @@ function toggleSavedGuide(guideId) {
   localStorage.setItem(savedGuidesStorageKey, JSON.stringify(savedGuideIds.value))
 }
 
+function isEventSaved(eventId) {
+  return savedEventIds.value.includes(eventId)
+}
+
+function toggleSavedEvent(eventId) {
+  if (isEventSaved(eventId)) {
+    savedEventIds.value = savedEventIds.value.filter((id) => id !== eventId)
+  } else {
+    savedEventIds.value = [...savedEventIds.value, eventId]
+  }
+
+  localStorage.setItem(savedEventsStorageKey, JSON.stringify(savedEventIds.value))
+}
+
 onMounted(() => {
   const storedGuideIds = localStorage.getItem(savedGuidesStorageKey)
 
   if (storedGuideIds) {
     savedGuideIds.value = JSON.parse(storedGuideIds)
+  }
+
+  const storedEventIds = localStorage.getItem(savedEventsStorageKey)
+
+  if (storedEventIds) {
+    savedEventIds.value = JSON.parse(storedEventIds)
   }
 })
 </script>
@@ -96,7 +120,8 @@ onMounted(() => {
         <span class="nav-link nav-link--active">Learn &amp; act</span>
       </nav>
 
-      <span class="prototype-label">Prototype · Round 1</span>
+      <span class="saved-summary" aria-live="polite">Saved: {{ savedCount }}</span>
+      <span class="prototype-label">Prototype · Round 2</span>
     </header>
 
     <main id="main-content">
@@ -224,7 +249,14 @@ onMounted(() => {
                 <p>{{ event.description }}</p>
                 <div class="feed-card__footer">
                   <span>{{ event.location }}</span>
-                  <button class="text-button" type="button">Save place</button>
+                  <button
+                    class="text-button"
+                    type="button"
+                    :aria-pressed="isEventSaved(event.id)"
+                    @click="toggleSavedEvent(event.id)"
+                  >
+                    {{ isEventSaved(event.id) ? 'Saved' : 'Save place' }}
+                  </button>
                 </div>
               </article>
             </div>
