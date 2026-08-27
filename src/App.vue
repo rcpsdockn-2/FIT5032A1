@@ -42,8 +42,15 @@ function handleSearch() {
   searchError.value = ''
   searchNotice.value = ''
 
-  if (!searchTerm.value.trim()) {
+  const search = searchTerm.value.trim()
+
+  if (!search) {
     searchError.value = 'Please enter an item, such as batteries or glass.'
+    return
+  }
+
+  if (search.length < 2) {
+    searchError.value = 'Please enter at least 2 characters to search.'
     return
   }
 
@@ -121,7 +128,7 @@ onMounted(() => {
       </nav>
 
       <span class="saved-summary" aria-live="polite">Saved: {{ savedCount }}</span>
-      <span class="prototype-label">Prototype · Round 2</span>
+      <span class="prototype-label">Prototype · Round 3</span>
     </header>
 
     <main id="main-content">
@@ -163,6 +170,7 @@ onMounted(() => {
                 type="search"
                 placeholder="batteries, glass, e-waste..."
                 autocomplete="off"
+                :aria-invalid="Boolean(searchError)"
                 :aria-describedby="searchError ? 'search-error' : 'search-note'"
               />
               <button class="primary-button" type="submit">Find my guide</button>
