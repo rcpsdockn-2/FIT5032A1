@@ -124,11 +124,13 @@ onMounted(() => {
       </a>
 
       <nav class="main-nav" aria-label="Main navigation">
-        <span class="nav-link nav-link--active">Learn &amp; act</span>
+        <a class="nav-link nav-link--active" href="#main-content" aria-current="page">
+          Learn &amp; act
+        </a>
       </nav>
 
       <span class="saved-summary" aria-live="polite">Saved: {{ savedCount }}</span>
-      <span class="prototype-label">Prototype · Round 3</span>
+      <span class="prototype-label">Prototype · Round 5</span>
     </header>
 
     <main id="main-content">
@@ -147,7 +149,7 @@ onMounted(() => {
             <span class="heading-note__number">01</span>
             <div>
               <strong>Start with one item</strong>
-              <p>This first version uses local sample data so the interface can grow safely.</p>
+              <p>This version uses local sample data so the interface can grow safely.</p>
             </div>
           </aside>
         </div>
