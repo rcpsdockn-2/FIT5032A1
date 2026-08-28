@@ -171,7 +171,7 @@ onMounted(() => {
                 placeholder="batteries, glass, e-waste..."
                 autocomplete="off"
                 :aria-invalid="Boolean(searchError)"
-                :aria-describedby="searchError ? 'search-error' : 'search-note'"
+                :aria-describedby="searchError ? 'search-error' : searchNotice ? 'search-note' : undefined"
               />
               <button class="primary-button" type="submit">Find my guide</button>
             </div>
@@ -189,6 +189,7 @@ onMounted(() => {
               :key="category"
               class="category-button"
               :class="{ 'category-button--selected': selectedCategory === category }"
+              :aria-pressed="selectedCategory === category"
               type="button"
               @click="selectCategory(category)"
             >
@@ -231,7 +232,7 @@ onMounted(() => {
                 </div>
               </article>
 
-              <div v-if="!filteredGuides.length" class="empty-state">
+              <div v-if="!filteredGuides.length" class="empty-state" role="status">
                 <strong>No guide matches this filter yet.</strong>
                 <p>Try “battery”, “glass” or “charger”, or return to all guides.</p>
               </div>
