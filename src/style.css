@@ -544,6 +544,51 @@ p {
   font-size: 0.78rem;
 }
 
+.account-panel {
+  max-width: 520px;
+  margin: 0 auto;
+  overflow-wrap: anywhere;
+}
+
+.account-form {
+  display: grid;
+  gap: 18px;
+  margin-top: 24px;
+}
+
+.account-form label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 700;
+}
+
+.account-form input {
+  width: 100%;
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid #a9bfce;
+  border-radius: 8px;
+}
+
+.account-note {
+  color: var(--muted);
+  font-size: 0.9rem;
+  margin: 10px 0;
+}
+
+.account-details {
+  padding: 24px 0;
+}
+
+.account-details p {
+  margin-top: 16px;
+}
+
+button:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
 .site-footer {
   display: flex;
   justify-content: space-between;

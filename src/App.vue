@@ -1,5 +1,6 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
+import AccountPanel from './components/AccountPanel.vue'
 import {
   eventItems,
   guideCategories,
@@ -8,6 +9,7 @@ import {
 } from './data/cycleWiseData'
 
 const searchTerm = ref('')
+const currentPage = ref('learn')
 const selectedCategory = ref('All')
 const searchError = ref('')
 const searchNotice = ref('')
@@ -118,23 +120,26 @@ onMounted(() => {
 
   <div class="app-shell">
     <header class="site-header">
-      <a class="brand" href="#main-content" aria-label="CycleWise home">
+      <a class="brand" href="#main-content" aria-label="CycleWise home" @click="currentPage = 'learn'">
         <span class="brand-mark" aria-hidden="true">↻</span>
         <span>CycleWise</span>
       </a>
 
       <nav class="main-nav" aria-label="Main navigation">
-        <a class="nav-link nav-link--active" href="#main-content" aria-current="page">
+        <button class="nav-link" type="button" :class="{ 'nav-link--active': currentPage === 'learn' }"
+          :aria-pressed="currentPage === 'learn'" @click="currentPage = 'learn'">
           Learn &amp; act
-        </a>
+        </button>
+        <button class="nav-link" type="button" :class="{ 'nav-link--active': currentPage === 'account' }"
+          :aria-pressed="currentPage === 'account'" @click="currentPage = 'account'">My account</button>
       </nav>
 
       <span class="saved-summary" aria-live="polite">Saved: {{ savedCount }}</span>
-      <span class="prototype-label">Prototype · Round 5</span>
     </header>
 
     <main id="main-content">
-      <section class="page-content">
+      <AccountPanel v-show="currentPage === 'account'" />
+      <section v-show="currentPage === 'learn'" class="page-content">
         <div class="page-heading">
           <div>
             <p class="eyebrow">Melbourne circular economy guide</p>
