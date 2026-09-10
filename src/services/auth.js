@@ -2,6 +2,13 @@
 const usersKey = 'cyclewise-users'
 const sessionKey = 'cyclewise-current-user'
 
+// Public demo credentials, not a production administrator account.
+const demoAdmin = {
+  id: 'demo-admin', name: 'Demo Admin', email: 'admin@cyclewise.example', role: 'admin',
+  salt: 'cyclewise-demo-admin-v1',
+  passwordHash: '6ad0c62d40ac7c7225f3779371a45a0c4cfa04de20f2058d048566890063c441',
+}
+
 function readUsers() {
   try {
     const users = JSON.parse(localStorage.getItem(usersKey) || '[]')
@@ -32,7 +39,8 @@ async function hashPassword(password, salt) {
 }
 
 function accountDetails(user) {
-  return { id: user.id, name: user.name, email: user.email }
+  // Round 1 accounts have no role; treat them as members.
+  return { id: user.id, name: user.name, email: user.email, role: user.role === 'admin' ? 'admin' : 'member' }
 }
 
 export async function register(name, email, password, confirmation) {
@@ -51,7 +59,7 @@ export async function register(name, email, password, confirmation) {
     throw new Error('The passwords do not match.')
   }
   const users = readUsers()
-  if (users.some((user) => user.email === email)) {
+  if (email === demoAdmin.email || users.some((user) => user.email === email)) {
     throw new Error('An account with this email already exists. Please sign in.')
   }
   const salt = crypto.randomUUID()
@@ -61,7 +69,7 @@ export async function register(name, email, password, confirmation) {
   if (latestUsers.some((user) => user.email === email)) {
     throw new Error('An account with this email already exists. Please sign in.')
   }
-  const user = { id: crypto.randomUUID(), name, email, salt, passwordHash }
+  const user = { id: crypto.randomUUID(), name, email, salt, passwordHash, role: 'member' }
   try {
     localStorage.setItem(usersKey, JSON.stringify([...latestUsers, user]))
   } catch {
@@ -74,7 +82,7 @@ export async function signIn(email, password) {
   if (!email.trim() || !password) {
     throw new Error('Please enter your email and password.')
   }
-  const user = readUsers().find((item) => item.email === email.trim().toLowerCase())
+  const user = [demoAdmin, ...readUsers()].find((item) => item.email === email.trim().toLowerCase())
   if (!user || await hashPassword(password, user.salt) !== user.passwordHash) {
     throw new Error('Email or password is incorrect.')
   }
@@ -89,10 +97,30 @@ export async function signIn(email, password) {
 export function getCurrentUser() {
   const id = sessionStorage.getItem(sessionKey)
   if (!id) return null
-  const user = readUsers().find((item) => item.id === id)
+  const user = [demoAdmin, ...readUsers()].find((item) => item.id === id)
   return user ? accountDetails(user) : null
 }
 
 export function signOut() {
   sessionStorage.removeItem(sessionKey)
+}
+
+export function canAccessPage(page, user) {
+  if (page === 'learn' || page === 'account') return true
+  if (page === 'saved') return Boolean(user)
+  if (page === 'admin') return user?.role === 'admin'
+  return false
+}
+
+export function requireUser() {
+  const user = getCurrentUser()
+  if (!user) throw new Error('Please sign in to use your saved items.')
+  return user
+}
+
+export function listAccounts() {
+  if (!canAccessPage('admin', getCurrentUser())) {
+    throw new Error('Only an administrator can view local accounts.')
+  }
+  return [demoAdmin, ...readUsers()].map(accountDetails)
 }

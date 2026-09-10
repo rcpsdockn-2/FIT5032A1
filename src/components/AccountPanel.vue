@@ -1,13 +1,15 @@
 <script setup>
-import { onMounted, ref } from 'vue'
-import { getCurrentUser, register, signIn, signOut } from '../services/auth'
+import { ref } from 'vue'
+import { register, signIn, signOut } from '../services/auth'
+
+defineProps({ currentUser: { type: Object, default: null } })
+const emit = defineEmits(['session-change'])
 
 const mode = ref('signin')
 const name = ref('')
 const email = ref('')
 const password = ref('')
 const confirmation = ref('')
-const currentUser = ref(null)
 const error = ref('')
 const notice = ref('')
 const busy = ref(false)
@@ -31,7 +33,8 @@ async function submitAccount() {
       mode.value = 'signin'
       notice.value = 'Account created. Please sign in with your email and password.'
     } else {
-      currentUser.value = await signIn(email.value, password.value)
+      await signIn(email.value, password.value)
+      emit('session-change')
       notice.value = 'You are signed in.'
     }
     password.value = ''
@@ -46,7 +49,7 @@ async function submitAccount() {
 function logout() {
   try {
     signOut()
-    currentUser.value = null
+    emit('session-change')
     changeMode('signin')
     notice.value = 'You have signed out.'
   } catch {
@@ -54,13 +57,6 @@ function logout() {
   }
 }
 
-onMounted(() => {
-  try {
-    currentUser.value = getCurrentUser()
-  } catch (issue) {
-    error.value = issue.message
-  }
-})
 </script>
 
 <template>
@@ -73,6 +69,9 @@ onMounted(() => {
       <div v-if="currentUser" class="account-details">
         <h2>Welcome, {{ currentUser.name }}</h2>
         <p>{{ currentUser.email }}</p>
+        <p>Role: {{ currentUser.role === 'admin' ? 'Admin' : 'Member' }}</p>
+        <p><a href="#/saved">View my saved items</a></p>
+        <p v-if="currentUser.role === 'admin'"><a href="#/admin">Open admin page</a></p>
         <button class="primary-button" type="button" @click="logout">Sign out</button>
       </div>
 
@@ -110,6 +109,12 @@ onMounted(() => {
           </button>
         </form>
       </template>
+
+      <details class="account-note">
+        <summary>Administrator demo account</summary>
+        <p>Email: admin@cyclewise.example<br />Password: CycleWiseDemo123!</p>
+        <p>This shared account is for local coursework demonstrations only.</p>
+      </details>
 
       <div id="account-feedback">
         <p v-if="error" class="form-message form-message--error" role="alert">{{ error }}</p>

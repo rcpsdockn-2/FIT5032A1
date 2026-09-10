@@ -1,6 +1,9 @@
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import AccountPanel from './components/AccountPanel.vue'
+import AdminPanel from './components/AdminPanel.vue'
+import { getCurrentUser, canAccessPage } from './services/auth.js'
+import { getSavedItems, toggleSavedItem } from './services/savedItems.js'
 import {
   eventItems,
   guideCategories,
@@ -10,14 +13,43 @@ import {
 
 const searchTerm = ref('')
 const currentPage = ref('learn')
+const currentUser = ref(null)
+const sessionError = ref('')
+const savedMessage = ref('')
 const selectedCategory = ref('All')
 const searchError = ref('')
 const searchNotice = ref('')
 const savedGuideIds = ref([])
 const savedEventIds = ref([])
 
-const savedGuidesStorageKey = 'cyclewise-saved-guides'
-const savedEventsStorageKey = 'cyclewise-saved-events'
+const pageAllowed = computed(() => canAccessPage(currentPage.value, currentUser.value))
+const savedGuides = computed(() => recyclingGuides.filter((guide) => savedGuideIds.value.includes(guide.id)))
+const savedEvents = computed(() => eventItems.filter((event) => savedEventIds.value.includes(event.id)))
+
+function updateSession() {
+  sessionError.value = ''
+  savedMessage.value = ''
+  currentUser.value = null
+  savedGuideIds.value = []
+  savedEventIds.value = []
+  try {
+    currentUser.value = getCurrentUser()
+    if (currentUser.value) {
+      const items = getSavedItems()
+      savedGuideIds.value = items.guides
+      savedEventIds.value = items.events
+    }
+  } catch (issue) {
+    sessionError.value = issue.message
+  }
+}
+
+function readPage() {
+  // Small hash-based navigation supports refresh, direct links and browser Back.
+  updateSession()
+  if (window.location.hash === '#main-content') return
+  currentPage.value = window.location.hash.replace('#/', '') || 'learn'
+}
 
 const filteredGuides = computed(() => {
   const search = searchTerm.value.trim().toLowerCase()
@@ -77,13 +109,7 @@ function isGuideSaved(guideId) {
 }
 
 function toggleSavedGuide(guideId) {
-  if (isGuideSaved(guideId)) {
-    savedGuideIds.value = savedGuideIds.value.filter((id) => id !== guideId)
-  } else {
-    savedGuideIds.value = [...savedGuideIds.value, guideId]
-  }
-
-  localStorage.setItem(savedGuidesStorageKey, JSON.stringify(savedGuideIds.value))
+  saveItem('guides', guideId)
 }
 
 function isEventSaved(eventId) {
@@ -91,27 +117,34 @@ function isEventSaved(eventId) {
 }
 
 function toggleSavedEvent(eventId) {
-  if (isEventSaved(eventId)) {
-    savedEventIds.value = savedEventIds.value.filter((id) => id !== eventId)
-  } else {
-    savedEventIds.value = [...savedEventIds.value, eventId]
-  }
+  saveItem('events', eventId)
+}
 
-  localStorage.setItem(savedEventsStorageKey, JSON.stringify(savedEventIds.value))
+function saveItem(type, id) {
+  savedMessage.value = ''
+  if (!currentUser.value) {
+    window.location.hash = '#/account'
+    return
+  }
+  try {
+    const items = toggleSavedItem(type, id)
+    savedGuideIds.value = items.guides
+    savedEventIds.value = items.events
+    savedMessage.value = items[type].includes(id) ? 'Item saved to your account.' : 'Item removed from your saved list.'
+  } catch (issue) {
+    savedMessage.value = issue.message
+  }
 }
 
 onMounted(() => {
-  const storedGuideIds = localStorage.getItem(savedGuidesStorageKey)
+  readPage()
+  window.addEventListener('hashchange', readPage)
+  window.addEventListener('storage', updateSession)
+})
 
-  if (storedGuideIds) {
-    savedGuideIds.value = JSON.parse(storedGuideIds)
-  }
-
-  const storedEventIds = localStorage.getItem(savedEventsStorageKey)
-
-  if (storedEventIds) {
-    savedEventIds.value = JSON.parse(storedEventIds)
-  }
+onUnmounted(() => {
+  window.removeEventListener('hashchange', readPage)
+  window.removeEventListener('storage', updateSession)
 })
 </script>
 
@@ -120,25 +153,61 @@ onMounted(() => {
 
   <div class="app-shell">
     <header class="site-header">
-      <a class="brand" href="#main-content" aria-label="CycleWise home" @click="currentPage = 'learn'">
+      <a class="brand" href="#/learn" aria-label="CycleWise home">
         <span class="brand-mark" aria-hidden="true">↻</span>
         <span>CycleWise</span>
       </a>
 
       <nav class="main-nav" aria-label="Main navigation">
-        <button class="nav-link" type="button" :class="{ 'nav-link--active': currentPage === 'learn' }"
-          :aria-pressed="currentPage === 'learn'" @click="currentPage = 'learn'">
+        <a class="nav-link" href="#/learn" :class="{ 'nav-link--active': currentPage === 'learn' }"
+          :aria-current="currentPage === 'learn' ? 'page' : undefined">
           Learn &amp; act
-        </button>
-        <button class="nav-link" type="button" :class="{ 'nav-link--active': currentPage === 'account' }"
-          :aria-pressed="currentPage === 'account'" @click="currentPage = 'account'">My account</button>
+        </a>
+        <a class="nav-link" href="#/account" :class="{ 'nav-link--active': currentPage === 'account' }"
+          :aria-current="currentPage === 'account' ? 'page' : undefined">My account</a>
+        <a v-if="currentUser" class="nav-link" href="#/saved" :class="{ 'nav-link--active': currentPage === 'saved' }"
+          :aria-current="currentPage === 'saved' ? 'page' : undefined">My saved</a>
+        <a v-if="currentUser?.role === 'admin'" class="nav-link" href="#/admin" :class="{ 'nav-link--active': currentPage === 'admin' }"
+          :aria-current="currentPage === 'admin' ? 'page' : undefined">Admin</a>
       </nav>
 
-      <span class="saved-summary" aria-live="polite">Saved: {{ savedCount }}</span>
+      <span class="saved-summary" aria-live="polite">{{ currentUser ? `Saved: ${savedCount}` : 'Guest' }}</span>
     </header>
 
-    <main id="main-content">
-      <AccountPanel v-show="currentPage === 'account'" />
+    <main id="main-content" tabindex="-1">
+      <p v-if="sessionError" class="session-message" role="alert">{{ sessionError }}</p>
+      <p v-if="savedMessage" class="session-message" role="status">{{ savedMessage }}</p>
+      <section v-if="!pageAllowed" class="page-content">
+        <h1>Page unavailable</h1>
+        <p v-if="currentPage === 'admin'">Only an administrator can view this page.</p>
+        <p v-else-if="currentPage === 'saved'">Please sign in to view your saved items.</p>
+        <p v-else>This page does not exist.</p>
+        <a href="#/account">Go to my account</a>
+      </section>
+      <AccountPanel v-if="currentPage === 'account'" :current-user="currentUser" @session-change="updateSession" />
+      <AdminPanel v-if="currentPage === 'admin' && pageAllowed" />
+      <section v-if="currentPage === 'saved' && pageAllowed" class="page-content">
+        <p class="eyebrow">{{ currentUser.name }} · My collection</p>
+        <h1>My saved items</h1>
+        <p>Your guides and events are saved separately from other accounts in this browser.</p>
+        <div v-if="!savedCount" class="empty-state">Nothing saved yet. <a href="#/learn">Explore the guides</a>.</div>
+        <h2>Guides ({{ savedGuides.length }})</h2>
+        <ul class="account-list">
+          <li v-for="guide in savedGuides" :key="guide.id" class="guide-card">
+            <div class="card-body"><h3>{{ guide.title }}</h3><p>{{ guide.action }}</p>
+              <button type="button" class="secondary-button" :aria-label="`Remove ${guide.title}`" @click="toggleSavedGuide(guide.id)">Remove</button>
+            </div>
+          </li>
+        </ul>
+        <h2>Events ({{ savedEvents.length }})</h2>
+        <ul class="account-list">
+          <li v-for="event in savedEvents" :key="event.id" class="guide-card">
+            <div class="card-body"><h3>{{ event.title }}</h3><p>{{ event.location }} · {{ event.date }}</p>
+              <button type="button" class="secondary-button" :aria-label="`Remove ${event.title}`" @click="toggleSavedEvent(event.id)">Remove</button>
+            </div>
+          </li>
+        </ul>
+      </section>
       <section v-show="currentPage === 'learn'" class="page-content">
         <div class="page-heading">
           <div>
@@ -233,7 +302,7 @@ onMounted(() => {
                       :aria-pressed="isGuideSaved(guide.id)"
                       @click="toggleSavedGuide(guide.id)"
                     >
-                      {{ isGuideSaved(guide.id) ? 'Saved' : 'Save guide' }}
+                      {{ !currentUser ? 'Sign in to save' : isGuideSaved(guide.id) ? 'Saved' : 'Save guide' }}
                     </button>
                   </div>
                 </div>
@@ -271,7 +340,7 @@ onMounted(() => {
                     :aria-pressed="isEventSaved(event.id)"
                     @click="toggleSavedEvent(event.id)"
                   >
-                    {{ isEventSaved(event.id) ? 'Saved' : 'Save place' }}
+                    {{ !currentUser ? 'Sign in to save' : isEventSaved(event.id) ? 'Saved' : 'Save place' }}
                   </button>
                 </div>
               </article>
