@@ -2,6 +2,7 @@
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import AccountPanel from './components/AccountPanel.vue'
 import AdminPanel from './components/AdminPanel.vue'
+import GuideRating from './components/GuideRating.vue'
 import { getCurrentUser, canAccessPage } from './services/auth.js'
 import { getSavedItems, toggleSavedItem } from './services/savedItems.js'
 import {
@@ -305,6 +306,7 @@ onUnmounted(() => {
                       {{ !currentUser ? 'Sign in to save' : isGuideSaved(guide.id) ? 'Saved' : 'Save guide' }}
                     </button>
                   </div>
+                  <GuideRating :guide-id="guide.id" :current-user="currentUser" />
                 </div>
               </article>
 

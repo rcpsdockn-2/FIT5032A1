@@ -2,6 +2,7 @@ import { beforeEach, test } from 'node:test'
 import assert from 'node:assert/strict'
 import { register, signIn, signOut, getCurrentUser, canAccessPage, listAccounts } from '../src/services/auth.js'
 import { getSavedItems, toggleSavedItem } from '../src/services/savedItems.js'
+import { getGuideRating, rateGuide } from '../src/services/ratings.js'
 
 // In-memory browser storage keeps test accounts away from real browser data.
 function createStorage() {
@@ -16,6 +17,52 @@ function createStorage() {
 beforeEach(() => {
   Object.defineProperty(globalThis, 'localStorage', { value: createStorage(), configurable: true })
   Object.defineProperty(globalThis, 'sessionStorage', { value: createStorage(), configurable: true })
+})
+
+test('ratings require login and reject invalid scores and guides', async () => {
+  assert.deepEqual(getGuideRating('glass'), { count: 0, average: null, ownScore: '' })
+  assert.throws(() => rateGuide('glass', 5), /sign in/)
+  await register('Rater', 'rater@example.com', 'testpass123', 'testpass123')
+  await signIn('rater@example.com', 'testpass123')
+  for (const score of [0, 6, 2.5, NaN, '5', '<script>']) {
+    assert.throws(() => rateGuide('glass', score), /whole number/)
+  }
+  assert.throws(() => rateGuide('missing', 5), /not found/)
+  assert.equal(localStorage.getItem('cyclewise-ratings'), null)
+})
+
+test('ratings aggregate accounts and update rather than duplicate votes', async () => {
+  const first = await register('First', 'first@example.com', 'testpass123', 'testpass123')
+  const second = await register('Second', 'second@example.com', 'testpass123', 'testpass123')
+  await signIn('first@example.com', 'testpass123')
+  rateGuide('glass', 5)
+  await signIn('second@example.com', 'testpass123')
+  rateGuide('glass', 3)
+  assert.deepEqual(getGuideRating('glass', second.id), { count: 2, average: '4.0', ownScore: 3 })
+  rateGuide('glass', 1)
+  assert.deepEqual(getGuideRating('glass', first.id), { count: 2, average: '3.0', ownScore: 5 })
+  assert.equal(getGuideRating('batteries').count, 0)
+  signOut()
+  assert.deepEqual(getGuideRating('glass'), { count: 2, average: '3.0', ownScore: '' })
+  await signIn('second@example.com', 'testpass123')
+  assert.equal(getGuideRating('glass', second.id).ownScore, 1)
+})
+
+test('damaged ratings and write failure are reported without overwriting data', async () => {
+  await register('Rater', 'rater@example.com', 'testpass123', 'testpass123')
+  await signIn('rater@example.com', 'testpass123')
+  for (const value of ['broken', '{}', '[null]', '[{"userId":"x","guideId":"glass","score":9}]']) {
+    localStorage.setItem('cyclewise-ratings', value)
+    assert.throws(() => getGuideRating('glass'), /Cannot read/)
+    assert.throws(() => rateGuide('glass', 5), /Cannot read/)
+    assert.equal(localStorage.getItem('cyclewise-ratings'), value)
+  }
+  localStorage.removeItem('cyclewise-ratings')
+  rateGuide('glass', 3)
+  const saved = localStorage.getItem('cyclewise-ratings')
+  localStorage.setItem = () => { throw new Error('Storage full') }
+  assert.throws(() => rateGuide('glass', 5), /Could not save/)
+  assert.equal(localStorage.getItem('cyclewise-ratings'), saved)
 })
 
 test('registration validates name, email, password length and confirmation', async () => {

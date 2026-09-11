@@ -67,6 +67,8 @@ function logout() {
       <p class="account-note">Local demo accounts work only in this browser. Use a test email and a password you do not use elsewhere.</p>
 
       <div v-if="currentUser" class="account-details">
+        <!-- Vue escapes user text here; never render account input with v-html.
+             https://vuejs.org/guide/best-practices/security.html -->
         <h2>Welcome, {{ currentUser.name }}</h2>
         <p>{{ currentUser.email }}</p>
         <p>Role: {{ currentUser.role === 'admin' ? 'Admin' : 'Member' }}</p>

@@ -711,3 +711,24 @@ button:disabled {
     padding: 18px 20px;
   }
 }
+.guide-rating {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid #d5dfe5;
+}
+
+.rating-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .75rem;
+  margin: .5rem 0;
+}
+
+.rating-controls select {
+  padding: .65rem;
+  border: 1px solid #70818d;
+  border-radius: .4rem;
+  background: white;
+  color: #173346;
+  font: inherit;
+}

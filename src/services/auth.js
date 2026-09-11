@@ -114,7 +114,7 @@ export function canAccessPage(page, user) {
 
 export function requireUser() {
   const user = getCurrentUser()
-  if (!user) throw new Error('Please sign in to use your saved items.')
+  if (!user) throw new Error('Please sign in to use this feature.')
   return user
 }
 
