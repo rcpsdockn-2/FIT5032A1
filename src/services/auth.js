@@ -18,6 +18,11 @@ function readUsers() {
       typeof user.passwordHash === 'string')) {
       throw new Error('Invalid accounts')
     }
+    if (new Set(users.map((user) => user.id)).size !== users.length ||
+      new Set(users.map((user) => user.email)).size !== users.length ||
+      users.some((user) => !user.id || user.id === demoAdmin.id || user.email === demoAdmin.email)) {
+      throw new Error('Invalid account identities')
+    }
     return users
   } catch {
     throw new Error('Cannot read local accounts. Check that browser storage is available and account data is valid.')
@@ -39,8 +44,9 @@ async function hashPassword(password, salt) {
 }
 
 function accountDetails(user) {
-  // Round 1 accounts have no role; treat them as members.
-  return { id: user.id, name: user.name, email: user.email, role: user.role === 'admin' ? 'admin' : 'member' }
+  // Registered accounts stay members, even if their stored role field is changed.
+  // This does not make client-side sessions a production security boundary.
+  return { id: user.id, name: user.name, email: user.email, role: user === demoAdmin ? 'admin' : 'member' }
 }
 
 export async function register(name, email, password, confirmation) {
@@ -81,6 +87,9 @@ export async function register(name, email, password, confirmation) {
 export async function signIn(email, password) {
   if (!email.trim() || !password) {
     throw new Error('Please enter your email and password.')
+  }
+  if (email.length > 254 || password.length > 128) {
+    throw new Error('Email or password is too long.')
   }
   const user = [demoAdmin, ...readUsers()].find((item) => item.email === email.trim().toLowerCase())
   if (!user || await hashPassword(password, user.salt) !== user.passwordHash) {

@@ -66,6 +66,6 @@ export const weeklyUpdates = [
   {
     id: 'source-date',
     title: 'Use current sources',
-    description: 'This prototype will later show a source and updated date for each guide.',
+    description: 'These are sample guides. Check your council website for current collection rules.',
   },
 ]

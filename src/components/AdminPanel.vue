@@ -1,16 +1,26 @@
 <script setup>
-import { onMounted, ref } from 'vue'
+import { onMounted, onUnmounted, ref } from 'vue'
 import { listAccounts } from '../services/auth.js'
 
 const accounts = ref([])
 const error = ref('')
-onMounted(() => {
+function refresh() {
+  accounts.value = []
+  error.value = ''
   try {
     accounts.value = listAccounts()
   } catch (issue) {
     error.value = issue.message
   }
+}
+function handleStorage(event) {
+  if (!event.key || event.key === 'cyclewise-users') refresh()
+}
+onMounted(() => {
+  refresh()
+  window.addEventListener('storage', handleStorage)
 })
+onUnmounted(() => window.removeEventListener('storage', handleStorage))
 </script>
 
 <template>

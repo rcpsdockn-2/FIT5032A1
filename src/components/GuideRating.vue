@@ -7,6 +7,17 @@ const summary = ref(null)
 const score = ref('')
 const message = ref('')
 const error = ref('')
+const scoreInput = ref(null)
+
+function clearFeedback() {
+  message.value = ''
+  error.value = ''
+}
+
+function handleStorage(event) {
+  // Unrelated saves in another tab must not discard the chosen score.
+  if (!event.key || event.key === 'cyclewise-ratings') refresh()
+}
 
 function refresh() {
   message.value = ''
@@ -30,15 +41,16 @@ function submit() {
     if (!error.value) message.value = 'Your rating has been saved.'
   } catch (issue) {
     error.value = issue.message
+    scoreInput.value?.focus()
   }
 }
 
 watch(() => props.currentUser?.id, refresh)
 onMounted(() => {
   refresh()
-  window.addEventListener('storage', refresh)
+  window.addEventListener('storage', handleStorage)
 })
-onUnmounted(() => window.removeEventListener('storage', refresh))
+onUnmounted(() => window.removeEventListener('storage', handleStorage))
 </script>
 
 <template>
@@ -50,7 +62,7 @@ onUnmounted(() => window.removeEventListener('storage', refresh))
     <form v-if="currentUser" novalidate @submit.prevent="submit">
       <label :for="`rating-${guideId}`">Your rating (1–5)</label>
       <div class="rating-controls">
-        <select :id="`rating-${guideId}`" v-model="score" :aria-invalid="Boolean(error)"
+        <select :id="`rating-${guideId}`" ref="scoreInput" v-model="score" @change="clearFeedback" :aria-invalid="Boolean(error)"
           :aria-describedby="error ? `rating-error-${guideId}` : undefined">
           <option value="">Select a score</option>
           <option v-for="value in 5" :key="value" :value="value">{{ value }}</option>

@@ -1,5 +1,5 @@
 <script setup>
-import { ref } from 'vue'
+import { nextTick, ref } from 'vue'
 import { register, signIn, signOut } from '../services/auth'
 
 defineProps({ currentUser: { type: Object, default: null } })
@@ -13,6 +13,7 @@ const confirmation = ref('')
 const error = ref('')
 const notice = ref('')
 const busy = ref(false)
+const feedback = ref(null)
 
 function changeMode(value) {
   mode.value = value
@@ -43,6 +44,8 @@ async function submitAccount() {
     error.value = issue.message
   } finally {
     busy.value = false
+    await nextTick()
+    feedback.value?.focus()
   }
 }
 
@@ -118,7 +121,7 @@ function logout() {
         <p>This shared account is for local coursework demonstrations only.</p>
       </details>
 
-      <div id="account-feedback">
+      <div id="account-feedback" ref="feedback" tabindex="-1">
         <p v-if="error" class="form-message form-message--error" role="alert">{{ error }}</p>
         <p v-if="notice" class="form-message" role="status">{{ notice }}</p>
       </div>

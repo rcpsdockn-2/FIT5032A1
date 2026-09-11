@@ -152,6 +152,55 @@ test('round 1 accounts without a role remain members', async () => {
   assert.equal((await signIn('old@example.com', 'testpass123')).role, 'member')
 })
 
+test('changing a stored member role does not grant administrator access', async () => {
+  await register('Member', 'member@example.com', 'testpass123', 'testpass123')
+  const accounts = JSON.parse(localStorage.getItem('cyclewise-users'))
+  accounts[0].role = 'admin'
+  localStorage.setItem('cyclewise-users', JSON.stringify(accounts))
+  assert.equal((await signIn('member@example.com', 'testpass123')).role, 'member')
+  assert.throws(listAccounts, /administrator/)
+})
+
+test('duplicate or reserved stored account IDs are rejected without overwriting', async () => {
+  await register('Member', 'member@example.com', 'testpass123', 'testpass123')
+  const accounts = JSON.parse(localStorage.getItem('cyclewise-users'))
+  for (const data of [[accounts[0], accounts[0]], [{ ...accounts[0], id: 'demo-admin' }]]) {
+    const original = JSON.stringify(data)
+    localStorage.setItem('cyclewise-users', original)
+    await assert.rejects(signIn('member@example.com', 'testpass123'), /Cannot read/)
+    assert.equal(localStorage.getItem('cyclewise-users'), original)
+  }
+})
+
+test('oversized login input is rejected before hashing', async () => {
+  await assert.rejects(signIn('a'.repeat(255), 'testpass123'), /too long/)
+  await assert.rejects(signIn('member@example.com', 'a'.repeat(129)), /too long/)
+  assert.equal(getCurrentUser(), null)
+})
+
+test('signing out blocks later rating and saved-item writes', async () => {
+  await register('Member', 'member@example.com', 'testpass123', 'testpass123')
+  await signIn('member@example.com', 'testpass123')
+  rateGuide('glass', 5)
+  const original = localStorage.getItem('cyclewise-ratings')
+  signOut()
+  assert.throws(() => rateGuide('glass', 1), /sign in/)
+  assert.throws(() => toggleSavedItem('guides', 'glass'), /sign in/)
+  assert.equal(localStorage.getItem('cyclewise-ratings'), original)
+})
+
+test('duplicate rating records are rejected instead of inflating the average', async () => {
+  await register('Member', 'member@example.com', 'testpass123', 'testpass123')
+  await signIn('member@example.com', 'testpass123')
+  rateGuide('glass', 5)
+  const rating = JSON.parse(localStorage.getItem('cyclewise-ratings'))[0]
+  const damaged = JSON.stringify([rating, rating])
+  localStorage.setItem('cyclewise-ratings', damaged)
+  assert.throws(() => getGuideRating('glass'), /Cannot read/)
+  assert.throws(() => rateGuide('glass', 3), /Cannot read/)
+  assert.equal(localStorage.getItem('cyclewise-ratings'), damaged)
+})
+
 test('saved guides and events are isolated, restored, and removable per account', async () => {
   localStorage.setItem('cyclewise-saved-guides', '["glass"]')
   await register('First', 'first@example.com', 'testpass123', 'testpass123')

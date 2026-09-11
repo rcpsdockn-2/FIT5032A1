@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue'
 import AccountPanel from './components/AccountPanel.vue'
 import AdminPanel from './components/AdminPanel.vue'
 import GuideRating from './components/GuideRating.vue'
@@ -22,6 +22,8 @@ const searchError = ref('')
 const searchNotice = ref('')
 const savedGuideIds = ref([])
 const savedEventIds = ref([])
+const savedLoaded = ref(false)
+const mainContent = ref(null)
 
 const pageAllowed = computed(() => canAccessPage(currentPage.value, currentUser.value))
 const savedGuides = computed(() => recyclingGuides.filter((guide) => savedGuideIds.value.includes(guide.id)))
@@ -33,23 +35,41 @@ function updateSession() {
   currentUser.value = null
   savedGuideIds.value = []
   savedEventIds.value = []
+  savedLoaded.value = false
   try {
     currentUser.value = getCurrentUser()
     if (currentUser.value) {
       const items = getSavedItems()
       savedGuideIds.value = items.guides
       savedEventIds.value = items.events
+      savedLoaded.value = true
     }
   } catch (issue) {
     sessionError.value = issue.message
   }
 }
 
-function readPage() {
+async function readPage(event) {
   // Small hash-based navigation supports refresh, direct links and browser Back.
   updateSession()
   if (window.location.hash === '#main-content') return
   currentPage.value = window.location.hash.replace('#/', '') || 'learn'
+  if (event?.type === 'hashchange') {
+    await nextTick()
+    mainContent.value?.focus()
+  }
+}
+
+function handleStorage(event) {
+  if (!event.key || event.key === 'cyclewise-users' ||
+    event.key === `cyclewise-saved-${currentUser.value?.id}`) updateSession()
+}
+
+function resetFilters() {
+  searchTerm.value = ''
+  selectedCategory.value = 'All'
+  searchError.value = ''
+  searchNotice.value = 'Showing all guides.'
 }
 
 const filteredGuides = computed(() => {
@@ -131,6 +151,7 @@ function saveItem(type, id) {
     const items = toggleSavedItem(type, id)
     savedGuideIds.value = items.guides
     savedEventIds.value = items.events
+    savedLoaded.value = true
     savedMessage.value = items[type].includes(id) ? 'Item saved to your account.' : 'Item removed from your saved list.'
   } catch (issue) {
     savedMessage.value = issue.message
@@ -140,17 +161,17 @@ function saveItem(type, id) {
 onMounted(() => {
   readPage()
   window.addEventListener('hashchange', readPage)
-  window.addEventListener('storage', updateSession)
+  window.addEventListener('storage', handleStorage)
 })
 
 onUnmounted(() => {
   window.removeEventListener('hashchange', readPage)
-  window.removeEventListener('storage', updateSession)
+  window.removeEventListener('storage', handleStorage)
 })
 </script>
 
 <template>
-  <a class="skip-link" href="#main-content">Skip to main content</a>
+  <a class="skip-link" href="#main-content" @click.prevent="mainContent?.focus()">Skip to main content</a>
 
   <div class="app-shell">
     <header class="site-header">
@@ -172,10 +193,10 @@ onUnmounted(() => {
           :aria-current="currentPage === 'admin' ? 'page' : undefined">Admin</a>
       </nav>
 
-      <span class="saved-summary" aria-live="polite">{{ currentUser ? `Saved: ${savedCount}` : 'Guest' }}</span>
+      <span class="saved-summary" aria-live="polite">{{ !currentUser ? 'Guest' : savedLoaded ? `Saved: ${savedCount}` : 'Saved: unavailable' }}</span>
     </header>
 
-    <main id="main-content" tabindex="-1">
+    <main id="main-content" ref="mainContent" tabindex="-1">
       <p v-if="sessionError" class="session-message" role="alert">{{ sessionError }}</p>
       <p v-if="savedMessage" class="session-message" role="status">{{ savedMessage }}</p>
       <section v-if="!pageAllowed" class="page-content">
@@ -191,23 +212,30 @@ onUnmounted(() => {
         <p class="eyebrow">{{ currentUser.name }} · My collection</p>
         <h1>My saved items</h1>
         <p>Your guides and events are saved separately from other accounts in this browser.</p>
-        <div v-if="!savedCount" class="empty-state">Nothing saved yet. <a href="#/learn">Explore the guides</a>.</div>
-        <h2>Guides ({{ savedGuides.length }})</h2>
-        <ul class="account-list">
-          <li v-for="guide in savedGuides" :key="guide.id" class="guide-card">
-            <div class="card-body"><h3>{{ guide.title }}</h3><p>{{ guide.action }}</p>
-              <button type="button" class="secondary-button" :aria-label="`Remove ${guide.title}`" @click="toggleSavedGuide(guide.id)">Remove</button>
-            </div>
-          </li>
-        </ul>
-        <h2>Events ({{ savedEvents.length }})</h2>
-        <ul class="account-list">
-          <li v-for="event in savedEvents" :key="event.id" class="guide-card">
-            <div class="card-body"><h3>{{ event.title }}</h3><p>{{ event.location }} · {{ event.date }}</p>
-              <button type="button" class="secondary-button" :aria-label="`Remove ${event.title}`" @click="toggleSavedEvent(event.id)">Remove</button>
-            </div>
-          </li>
-        </ul>
+        <p v-if="!savedLoaded">Your saved items could not be loaded. Existing data has not been removed.</p>
+        <template v-else>
+          <div v-if="!savedCount" class="empty-state">Nothing saved yet. <a href="#/learn">Explore the guides</a>.</div>
+          <h2>Guides ({{ savedGuides.length }})</h2>
+          <ul class="account-list">
+            <li v-for="guide in savedGuides" :key="guide.id" class="guide-card">
+              <div class="card-body">
+                <h3>{{ guide.title }}</h3>
+                <p>{{ guide.action }}</p>
+                <button type="button" class="secondary-button" :aria-label="`Remove ${guide.title}`" @click="toggleSavedGuide(guide.id)">Remove</button>
+              </div>
+            </li>
+          </ul>
+          <h2>Events ({{ savedEvents.length }})</h2>
+          <ul class="account-list">
+            <li v-for="event in savedEvents" :key="event.id" class="guide-card">
+              <div class="card-body">
+                <h3>{{ event.title }}</h3>
+                <p>{{ event.location }} · {{ event.date }}</p>
+                <button type="button" class="secondary-button" :aria-label="`Remove ${event.title}`" @click="toggleSavedEvent(event.id)">Remove</button>
+              </div>
+            </li>
+          </ul>
+        </template>
       </section>
       <section v-show="currentPage === 'learn'" class="page-content">
         <div class="page-heading">
@@ -220,11 +248,11 @@ onUnmounted(() => {
             </p>
           </div>
 
-          <aside class="heading-note" aria-label="Current prototype scope">
+          <aside class="heading-note" aria-label="About the sample data">
             <span class="heading-note__number">01</span>
             <div>
               <strong>Start with one item</strong>
-              <p>This version uses local sample data so the interface can grow safely.</p>
+              <p>Explore sample guides, save useful items and share your rating.</p>
             </div>
           </aside>
         </div>
@@ -247,6 +275,8 @@ onUnmounted(() => {
                 type="search"
                 placeholder="batteries, glass, e-waste..."
                 autocomplete="off"
+                maxlength="100"
+                @input="searchError = ''; searchNotice = ''"
                 :aria-invalid="Boolean(searchError)"
                 :aria-describedby="searchError ? 'search-error' : searchNotice ? 'search-note' : undefined"
               />
@@ -273,6 +303,7 @@ onUnmounted(() => {
               {{ category }}
             </button>
           </div>
+          <button v-if="searchTerm || selectedCategory !== 'All'" type="button" class="text-button" @click="resetFilters">Reset filters</button>
         </section>
 
         <div class="content-grid">
@@ -373,8 +404,8 @@ onUnmounted(() => {
     </main>
 
     <footer class="site-footer">
-      <span>CycleWise Melbourne · early application skeleton</span>
-      <span>Built in rounds, with local sample data</span>
+      <span>CycleWise Melbourne · Learn, save and rate</span>
+      <span>Sample data · Accounts and ratings stay in this browser</span>
     </footer>
   </div>
 </template>
