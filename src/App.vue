@@ -3,6 +3,7 @@ import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue'
 import AccountPanel from './components/AccountPanel.vue'
 import AdminPanel from './components/AdminPanel.vue'
 import GuideRating from './components/GuideRating.vue'
+import DirectoryPanel from './components/DirectoryPanel.vue'
 import { getCurrentUser, canAccessPage } from './services/auth.js'
 import { getSavedItems, toggleSavedItem } from './services/savedItems.js'
 import {
@@ -187,6 +188,8 @@ onUnmounted(() => {
         </a>
         <a class="nav-link" href="#/account" :class="{ 'nav-link--active': currentPage === 'account' }"
           :aria-current="currentPage === 'account' ? 'page' : undefined">My account</a>
+        <a class="nav-link" href="#/directory" :class="{ 'nav-link--active': currentPage === 'directory' }"
+          :aria-current="currentPage === 'directory' ? 'page' : undefined">Places &amp; events</a>
         <a v-if="currentUser" class="nav-link" href="#/saved" :class="{ 'nav-link--active': currentPage === 'saved' }"
           :aria-current="currentPage === 'saved' ? 'page' : undefined">My saved</a>
         <a v-if="currentUser?.role === 'admin'" class="nav-link" href="#/admin" :class="{ 'nav-link--active': currentPage === 'admin' }"
@@ -208,6 +211,7 @@ onUnmounted(() => {
       </section>
       <AccountPanel v-if="currentPage === 'account'" :current-user="currentUser" @session-change="updateSession" />
       <AdminPanel v-if="currentPage === 'admin' && pageAllowed" />
+      <DirectoryPanel v-if="currentPage === 'directory' && pageAllowed" />
       <section v-if="currentPage === 'saved' && pageAllowed" class="page-content">
         <p class="eyebrow">{{ currentUser.name }} · My collection</p>
         <h1>My saved items</h1>

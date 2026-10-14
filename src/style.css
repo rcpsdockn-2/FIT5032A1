@@ -717,6 +717,63 @@ button:disabled {
   border-top: 1px solid #d5dfe5;
 }
 
+.directory-note {
+  padding: 16px;
+  background: var(--blue-pale);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.directory-section {
+  margin-top: 32px;
+}
+
+.table-scroll {
+  max-width: 100%;
+  overflow-x: auto;
+  margin-top: 16px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.table-scroll:focus-visible {
+  outline: 3px solid var(--blue);
+  outline-offset: 3px;
+}
+
+.directory-table {
+  width: 100%;
+  min-width: 600px;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 0.9rem;
+}
+
+.directory-table caption {
+  padding: 12px 16px;
+  text-align: left;
+  color: var(--muted);
+}
+
+.directory-table th,
+.directory-table td {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--line);
+}
+
+.directory-table thead {
+  background: var(--blue-soft);
+}
+
+.directory-table tbody th {
+  font-weight: 500;
+}
+
+.directory-table tbody tr:last-child th,
+.directory-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
 .account-details,
 .card-body,
 .account-list > li > div {

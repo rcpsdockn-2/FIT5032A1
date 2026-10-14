@@ -115,7 +115,7 @@ export function signOut() {
 }
 
 export function canAccessPage(page, user) {
-  if (page === 'learn' || page === 'account') return true
+  if (page === 'learn' || page === 'account' || page === 'directory') return true
   if (page === 'saved') return Boolean(user)
   if (page === 'admin') return user?.role === 'admin'
   return false
