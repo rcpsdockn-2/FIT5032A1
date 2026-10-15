@@ -1,0 +1,12 @@
+{
+  "functions": [{
+    "source": "functions", "codebase": "directory", "runtime": "nodejs22",
+    "ignore": ["node_modules", ".git", "*.log", ".env", ".env.*", "*.local"]
+  }],
+  "emulators": {
+    "functions": { "host": "127.0.0.1", "port": 5001 },
+    "hub": { "host": "127.0.0.1", "port": 4400 },
+    "logging": { "host": "127.0.0.1", "port": 4500 },
+    "ui": { "enabled": false }, "singleProjectMode": true
+  }
+}

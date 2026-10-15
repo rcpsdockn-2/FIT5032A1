@@ -1,6 +1,7 @@
 <script setup>
 import { recyclingPlaces, communityEvents } from '../data/directoryData.js'
 import DirectoryTable from './DirectoryTable.vue'
+import PlaceSearch from './PlaceSearch.vue'
 
 const placeColumns = [
   { key: 'name', label: 'Name' },
@@ -23,6 +24,7 @@ const eventColumns = [
     <p>Browse recycling services and community activities in one place.</p>
     <p class="directory-note">Demo directory: all names, opening hours and events below are fictional. These are not confirmed services or bookings.</p>
 
+    <PlaceSearch />
     <DirectoryTable table-id="places" title="Recycling places" :rows="recyclingPlaces" :columns="placeColumns" />
     <DirectoryTable table-id="events" title="Community events" :rows="communityEvents" :columns="eventColumns" />
   </section>
