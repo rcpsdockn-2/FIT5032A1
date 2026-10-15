@@ -2,6 +2,7 @@
 import { nextTick, ref } from 'vue'
 import { placeCategories } from '../../functions/data/places.js'
 import { searchPlaces } from '../services/placeSearch.js'
+import PlaceMap from './PlaceMap.vue'
 
 const category = ref('All')
 const suburb = ref('')
@@ -53,10 +54,7 @@ async function search() {
       <p v-if="error" class="form-message form-message--error" role="alert">{{ error }}</p>
       <p v-if="searched" role="status">{{ places.length ? `${places.length} sample place(s) returned by the directory function.` : 'No sample places match. Try another category or suburb.' }}</p>
     </div>
-    <ul v-if="places.length" class="place-results">
-      <li v-for="place in places" :key="place.id"><h3>{{ place.name }}</h3>
-        <p>{{ place.suburb }} · {{ place.category }} · {{ place.hours }}</p></li>
-    </ul>
+    <PlaceMap v-if="searched && places.length" :places="places" />
   </section>
 </template>
 
@@ -65,7 +63,4 @@ async function search() {
 .place-search-form > div { flex: 1 1 200px; min-width: 0; }
 label { display: block; margin-bottom: 6px; }
 input, select { width: 100%; min-height: 44px; padding: 10px; border: 1px solid var(--line); border-radius: 6px; font: inherit; }
-.place-results { padding-left: 24px; }
-.place-results li { margin: 16px 0; overflow-wrap: anywhere; }
-h3, .place-results p { margin: 6px 0; }
 </style>

@@ -1,3 +1,5 @@
+import { validCoordinates } from './mapRoutes.js'
+
 export function placeSearchEndpoint(environment) {
   if (environment.DEV) return '/functions/searchPlaces'
   const endpoint = environment.VITE_PLACES_FUNCTION_URL?.trim()
@@ -21,7 +23,7 @@ export async function searchPlaces(category, suburb, { environment = import.meta
   try { result = await response.json() } catch { throw new Error('Place search returned an invalid response. Check its configuration.') }
   if (!response.ok) throw new Error('Place search could not complete the request. Check your filters and try again.')
   if (!Array.isArray(result?.places) || result.count !== result.places.length || !result.places.every((place) =>
-    place && ['id', 'name', 'suburb', 'category', 'hours'].every((key) => typeof place[key] === 'string'))) {
+    place && validCoordinates(place) && ['id', 'name', 'suburb', 'category', 'hours'].every((key) => typeof place[key] === 'string'))) {
     throw new Error('Place search returned an invalid response. Please try again later.')
   }
   return result.places
