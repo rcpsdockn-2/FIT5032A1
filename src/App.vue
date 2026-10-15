@@ -158,7 +158,7 @@ function saveItem(type, id) {
     savedGuideIds.value = items.guides
     savedEventIds.value = items.events
     savedLoaded.value = true
-    savedMessage.value = items[type].includes(id) ? 'Item saved to your account.' : 'Item removed from your saved list.'
+    savedMessage.value = items[type].includes(id) ? 'Item saved for your account in this browser.' : 'Item removed from your saved list.'
   } catch (issue) {
     savedMessage.value = issue.message
   }

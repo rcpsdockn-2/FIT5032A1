@@ -15,11 +15,18 @@ Old browser-only accounts are not migrated, removed or granted cloud access. Cre
 a new Firebase account, even if the same email was used in the old local version.
 Saved guides and ratings still live in the browser, keyed by `firebase:` plus the
 Firebase UID. They do not sync across devices and are not protected server data.
-The Firestore SDK is prepared, but no database is provisioned or accessed yet.
+No Firestore database is used; the app initializes only Firebase Authentication.
 
 The old shared demo administrator is not a cloud administrator. Cloud admin UI
 requires a boolean `admin` custom claim assigned from a trusted server environment.
 Its legacy account view is read-only and is not a list of all Firebase users.
+
+The account flow stays in `src/services/auth.js`: validate inputs, call Firebase,
+then let `onAuthStateChanged` update the visible identity. An account change first
+clears the old administrator status. A simple increasing `sessionVersion` number
+makes late permission responses harmless after logout or another login. Stopping
+the subscription also ignores any response still in flight. This does not replace
+server checks: the email function verifies the Firebase ID token independently.
 
 `.env.local` is ignored by Git. Vite includes `VITE_` values in browser builds;
 they are not a place for passwords, email service keys or service-account private keys.

@@ -65,7 +65,7 @@ production configuration displays an error while the original tables remain usab
 
 The function folder is packaged independently and must not import private files
 from the repository root. Its `firebase.json` ignore list excludes dependencies,
-environment files and logs from a future function upload. No service-account key
+environment files and logs from the function upload. No service-account key
 or `.env.local` copy belongs in this folder.
 
 References:

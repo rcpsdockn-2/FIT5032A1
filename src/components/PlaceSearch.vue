@@ -40,7 +40,7 @@ async function search() {
   <section class="directory-section" aria-labelledby="place-search-title">
     <h2 id="place-search-title">Find a sample place</h2>
     <p>Query the directory function by category and suburb. These results are fictional, not confirmed services.</p>
-    <p class="directory-note">{{ localMode ? 'Local development: uses the Firebase Functions emulator, not a deployed cloud service.' : 'Search requires a configured production function endpoint.' }}</p>
+    <p v-if="localMode" class="directory-note">Local development: uses the Firebase Functions emulator.</p>
     <form class="place-search-form" :aria-busy="busy" @submit.prevent="search">
       <div><label for="place-search-category">Service category</label>
         <select id="place-search-category" v-model="category" :disabled="busy" @change="clearResults">

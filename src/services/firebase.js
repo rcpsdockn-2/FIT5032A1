@@ -9,9 +9,8 @@ export async function getFirebaseServices() {
   }
   const { getApps, initializeApp } = await import('firebase/app')
   const { initializeAuth, browserLocalPersistence } = await import('firebase/auth')
-  const { getFirestore } = await import('firebase/firestore')
   const app = getApps().find((item) => item.name === 'cyclewise')
     || initializeApp(firebaseSetup.config, 'cyclewise')
   const auth = initializeAuth(app, { persistence: browserLocalPersistence })
-  return { auth, db: getFirestore(app) }
+  return { auth }
 }

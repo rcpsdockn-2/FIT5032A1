@@ -25,9 +25,10 @@ coordinates are not real recycling facility addresses. Starting options in
    that start and destination are the same without contacting the route provider.
 8. Changing search to **Repair + Footscray** returns no matches and removes the map.
 
-No account, API key or geolocation permission is required. The current function
-integration is local; production must have a deployed same-origin function endpoint
-before this map search can work. A frontend build alone does not deploy the function.
+No account, map API key or geolocation permission is required. Local development
+uses the Functions emulator; production uses the same-origin Hosting rewrite to
+the deployed `searchPlaces` function. See `docs/deployment.md`. A frontend build
+alone does not deploy the function.
 
 ## Services, privacy and limits
 
@@ -50,7 +51,8 @@ before this map search can work. A frontend build alone does not deploy the func
   and removes map listeners/resize observation. A tile error reports that the
   basemap could not fully load, while the text list remains available.
 - Public tiles and route services are best-effort and may be unavailable. They
-  are not guaranteed production hosting or live navigation. No billing is enabled.
+  are not guaranteed live navigation. These public map services have no project
+  billing integration; Firebase Hosting and Functions have separate usage charges.
 
 ## Check
 

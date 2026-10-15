@@ -35,7 +35,7 @@ export async function getDrivingRoute(origin, destination, { fetcher = fetch, si
   if (!Number.isFinite(route?.distance) || route.distance < 0 || !Number.isFinite(route?.duration) || route.duration < 0
     || route.geometry?.type !== 'LineString' || !Array.isArray(line) || line.length < 2 || line.length > 20000
     || !line.every((point) => Array.isArray(point) && point.length === 2 && validCoordinates({ lng: point[0], lat: point[1] }))
-    || !Array.isArray(route.legs) || !route.legs.every((leg) => Array.isArray(leg.steps))) {
+    || !Array.isArray(route.legs) || !route.legs.every((leg) => leg && Array.isArray(leg.steps))) {
     throw new Error('The route service returned incomplete route data.')
   }
   const steps = route.legs.flatMap((leg) => leg.steps)

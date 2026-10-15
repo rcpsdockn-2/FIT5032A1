@@ -18,7 +18,7 @@ export async function searchPlaces(category, suburb, { environment = import.meta
   let response
   try {
     response = await fetcher(`${endpoint}?${params}`, { signal: AbortSignal.timeout(10000) })
-  } catch { throw new Error('Cannot reach place search. Check the connection or local Functions emulator.') }
+  } catch { throw new Error('Cannot reach place search. Check your connection and try again later.') }
   let result
   try { result = await response.json() } catch { throw new Error('Place search returned an invalid response. Check its configuration.') }
   if (!response.ok) throw new Error('Place search could not complete the request. Check your filters and try again.')

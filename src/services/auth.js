@@ -3,6 +3,7 @@ import { getFirebaseServices } from './firebase.js'
 let authClient = null
 let authApi = null
 let adminUid = null
+let sessionVersion = 0
 let sessionChanged = () => {}
 
 function authMessage(issue) {
@@ -39,6 +40,7 @@ export function getCurrentUser() {
 
 // Accept an SDK client here so account tests can use isolated in-memory identities.
 export async function connectAuth(client, api, onChange, onError) {
+  sessionVersion++
   authClient = null
   authApi = null
   adminUid = null
@@ -46,27 +48,34 @@ export async function connectAuth(client, api, onChange, onError) {
   authClient = client
   authApi = api
   sessionChanged = onChange
-  return api.onAuthStateChanged(client, async (user) => {
+  let active = true
+  const unsubscribe = api.onAuthStateChanged(client, async (user) => {
+    if (!active) return
+    const version = ++sessionVersion
     adminUid = null
+    // Show the new identity immediately. A late permissions result cannot update a newer session.
+    onChange()
+    if (!user) return
     try {
-      if (user) {
-        const token = await api.getIdTokenResult(user)
-        if (client.currentUser?.uid !== user.uid) return
-        if (token.claims.admin === true) adminUid = user.uid
+      const token = await api.getIdTokenResult(user)
+      if (!active || version !== sessionVersion || client.currentUser?.uid !== user.uid) return
+      if (token.claims.admin === true) {
+        adminUid = user.uid
+        onChange()
       }
-      if (client.currentUser?.uid !== user?.uid) return
-      onChange()
     } catch {
-      if (client.currentUser?.uid !== user?.uid) return
-      onChange()
+      if (!active || version !== sessionVersion || client.currentUser?.uid !== user.uid) return
       onError(new Error('Could not check account permissions. Administrator access is unavailable.'))
     }
   }, () => {
+    if (!active) return
+    sessionVersion++
     adminUid = null
     authClient = null
     onChange()
     onError(new Error('Could not restore your cloud session. Reload the page and try again.'))
   })
+  return () => { active = false; unsubscribe() }
 }
 
 export async function startAuth(onChange, onError) {

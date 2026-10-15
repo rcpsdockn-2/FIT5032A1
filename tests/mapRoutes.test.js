@@ -72,6 +72,7 @@ test('malformed routes, geometry, distance and directions cannot reach the map',
     (route) => { route.geometry.coordinates = [] },
     (route) => { route.geometry.type = 'Polygon' },
     (route) => { route.legs = [] },
+    (route) => { route.legs = [null] },
     (route) => { route.legs[0].steps[0].distance = -3 },
   ]) {
     const data = providerResult()

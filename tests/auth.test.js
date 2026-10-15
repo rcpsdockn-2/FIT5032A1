@@ -45,7 +45,7 @@ function fakeFirebase() {
     },
     async signOut(client) { client.currentUser = null; await listener(null) },
   }
-  return { auth, api }
+  return { auth, api, changeUser(user) { auth.currentUser = user; return listener(user) } }
 }
 
 let provider
@@ -139,6 +139,50 @@ test('an old token response cannot restore privileges after a user signs out', a
   await new Promise((resolve) => setImmediate(resolve))
   assert.equal(getCurrentUser(), null)
   assert.throws(listAccounts, /administrator/)
+})
+
+test('switching accounts immediately clears the old identity and admin UI', async () => {
+  const first = { uid: 'first', email: 'first@example.com', displayName: 'First', claims: { admin: true } }
+  let visibleUser
+  await connectAuth(provider.auth, provider.api, () => { visibleUser = getCurrentUser() }, () => {})
+  await provider.changeUser(first)
+  assert.equal(visibleUser.role, 'admin')
+  let resolveToken
+  provider.api.getIdTokenResult = () => new Promise((resolve) => { resolveToken = resolve })
+  const pending = provider.changeUser({ uid: 'second', email: 'second@example.com', displayName: 'Second' })
+  assert.equal(visibleUser.id, 'firebase:second')
+  assert.equal(visibleUser.role, 'member')
+  resolveToken({ claims: {} })
+  await pending
+})
+
+test('old permission results cannot grant admin after the same account logs in again', async () => {
+  const resolvers = []
+  provider.api.getIdTokenResult = () => new Promise((resolve) => { resolvers.push(resolve) })
+  const user = { uid: 'repeat', email: 'repeat@example.com' }
+  const oldLogin = provider.changeUser(user)
+  await provider.changeUser(null)
+  const newLogin = provider.changeUser({ ...user })
+  resolvers[1]({ claims: {} })
+  await newLogin
+  assert.equal(getCurrentUser().role, 'member')
+  resolvers[0]({ claims: { admin: true } })
+  await oldLogin
+  assert.equal(getCurrentUser().role, 'member')
+})
+
+test('unsubscribing ignores an in-flight permission result', async () => {
+  let resolveToken
+  let changes = 0
+  provider.api.getIdTokenResult = () => new Promise((resolve) => { resolveToken = resolve })
+  const unsubscribe = await connectAuth(provider.auth, provider.api, () => { changes++ }, () => {})
+  const pending = provider.changeUser({ uid: 'leaving', email: 'leaving@example.com' })
+  const before = changes
+  unsubscribe()
+  resolveToken({ claims: { admin: true } })
+  await pending
+  assert.equal(changes, before)
+  assert.equal(getCurrentUser().role, 'member')
 })
 
 test('only a boolean admin custom claim enables the legacy read-only account view', async () => {
