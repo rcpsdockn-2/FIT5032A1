@@ -1,9 +1,12 @@
 <script setup>
 import { nextTick, ref } from 'vue'
 import { register, signIn, signOut } from '../services/auth'
-import { firebaseSetup, getFirebaseServices } from '../services/firebase.js'
 
-defineProps({ currentUser: { type: Object, default: null } })
+defineProps({
+  currentUser: { type: Object, default: null },
+  authReady: Boolean,
+  authError: { type: String, default: '' },
+})
 const emit = defineEmits(['session-change'])
 
 const mode = ref('signin')
@@ -15,24 +18,6 @@ const error = ref('')
 const notice = ref('')
 const busy = ref(false)
 const feedback = ref(null)
-const firebaseNotice = ref('')
-const firebaseError = ref('')
-const firebaseBusy = ref(false)
-
-async function checkFirebaseSetup() {
-  if (firebaseBusy.value) return
-  firebaseNotice.value = ''
-  firebaseError.value = ''
-  firebaseBusy.value = true
-  try {
-    await getFirebaseServices()
-    firebaseNotice.value = 'Firebase SDK initialized. Cloud sign-in is not connected to this form yet.'
-  } catch {
-    firebaseError.value = 'Firebase setup could not be initialized. Check the Web app configuration and restart the server.'
-  } finally {
-    firebaseBusy.value = false
-  }
-}
 
 function changeMode(value) {
   mode.value = value
@@ -51,7 +36,8 @@ async function submitAccount() {
     if (mode.value === 'register') {
       await register(name.value, email.value, password.value, confirmation.value)
       mode.value = 'signin'
-      notice.value = 'Account created. Please sign in with your email and password.'
+      emit('session-change')
+      notice.value = 'Account created. You are signed in.'
     } else {
       await signIn(email.value, password.value)
       emit('session-change')
@@ -68,14 +54,18 @@ async function submitAccount() {
   }
 }
 
-function logout() {
+async function logout() {
+  if (busy.value) return
+  busy.value = true
   try {
-    signOut()
+    await signOut()
     emit('session-change')
     changeMode('signin')
     notice.value = 'You have signed out.'
-  } catch {
-    error.value = 'Could not sign out. Please check browser storage and try again.'
+  } catch (issue) {
+    error.value = issue.message
+  } finally {
+    busy.value = false
   }
 }
 
@@ -86,23 +76,8 @@ function logout() {
     <div class="account-panel">
       <p class="eyebrow">CycleWise community</p>
       <h1 id="account-title">My account</h1>
-      <p class="account-note">Local demo accounts work only in this browser. Use a test email and a password you do not use elsewhere.</p>
-
-      <details class="account-note">
-        <summary>Cloud account setup</summary>
-        <template v-if="firebaseSetup.missingFields.length">
-          <p>Firebase is not configured. Local demo accounts remain available.</p>
-          <p>Copy .env.example to .env.local, fill in the Firebase Web app settings and restart the server.</p>
-        </template>
-        <template v-else>
-          <p>Firebase configuration is available. This form still uses local demo accounts.</p>
-          <button type="button" class="secondary-button" :disabled="firebaseBusy" @click="checkFirebaseSetup">
-            {{ firebaseBusy ? 'Checking setup…' : 'Check Firebase setup' }}
-          </button>
-        </template>
-        <p v-if="firebaseNotice" role="status">{{ firebaseNotice }}</p>
-        <p v-if="firebaseError" class="form-message--error" role="alert">{{ firebaseError }}</p>
-      </details>
+      <p class="account-note">Sign in securely with Firebase. On a shared computer, sign out when you finish.</p>
+      <p class="account-note">Old browser-only accounts have not been migrated. Create a cloud account to continue; old saved data has not been deleted.</p>
 
       <div v-if="currentUser" class="account-details">
         <!-- Vue escapes user text here; never render account input with v-html.
@@ -112,7 +87,7 @@ function logout() {
         <p>Role: {{ currentUser.role === 'admin' ? 'Admin' : 'Member' }}</p>
         <p><a href="#/saved">View my saved items</a></p>
         <p v-if="currentUser.role === 'admin'"><a href="#/admin">Open admin page</a></p>
-        <button class="primary-button" type="button" @click="logout">Sign out</button>
+        <button class="primary-button" type="button" :disabled="busy" @click="logout">{{ busy ? 'Please wait…' : 'Sign out' }}</button>
       </div>
 
       <template v-else>
@@ -144,17 +119,11 @@ function logout() {
             <label for="account-confirmation">Confirm password</label>
             <input id="account-confirmation" v-model="confirmation" type="password" autocomplete="new-password" maxlength="128" required :disabled="busy" />
           </div>
-          <button class="primary-button" type="submit" :disabled="busy">
+          <button class="primary-button" type="submit" :disabled="busy || !authReady || Boolean(authError)">
             {{ busy ? 'Please wait…' : mode === 'register' ? 'Register' : 'Sign in to CycleWise' }}
           </button>
         </form>
       </template>
-
-      <details class="account-note">
-        <summary>Administrator demo account</summary>
-        <p>Email: admin@cyclewise.example<br />Password: CycleWiseDemo123!</p>
-        <p>This shared account is for local coursework demonstrations only.</p>
-      </details>
 
       <div id="account-feedback" ref="feedback" tabindex="-1">
         <p v-if="error" class="form-message form-message--error" role="alert">{{ error }}</p>

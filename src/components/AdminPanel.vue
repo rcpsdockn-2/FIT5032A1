@@ -26,11 +26,11 @@ onUnmounted(() => window.removeEventListener('storage', handleStorage))
 <template>
   <section class="page-content" aria-labelledby="admin-title">
     <p class="eyebrow">Administrator</p>
-    <h1 id="admin-title">Local accounts</h1>
-    <p>View accounts registered in this browser. Passwords are not displayed.</p>
+    <h1 id="admin-title">Legacy browser accounts</h1>
+    <p>Read-only accounts from the previous local version, not Firebase users. Passwords are not displayed.</p>
     <p v-if="error" role="alert">{{ error }}</p>
     <template v-else>
-      <p>{{ accounts.length }} accounts, including the demo administrator.</p>
+      <p>{{ accounts.length }} legacy accounts. Cloud administrator access is assigned separately.</p>
       <ul class="account-list">
         <li v-for="account in accounts" :key="account.id" class="guide-card">
           <div>

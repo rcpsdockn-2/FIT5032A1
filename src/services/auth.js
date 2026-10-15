@@ -1,117 +1,123 @@
-// Local coursework accounts only. Browser storage is not a trusted server.
-const usersKey = 'cyclewise-users'
-const sessionKey = 'cyclewise-current-user'
+import { getFirebaseServices } from './firebase.js'
 
-// Public demo credentials, not a production administrator account.
-const demoAdmin = {
-  id: 'demo-admin', name: 'Demo Admin', email: 'admin@cyclewise.example', role: 'admin',
-  salt: 'cyclewise-demo-admin-v1',
-  passwordHash: '6ad0c62d40ac7c7225f3779371a45a0c4cfa04de20f2058d048566890063c441',
+let authClient = null
+let authApi = null
+let adminUid = null
+let sessionChanged = () => {}
+
+function authMessage(issue) {
+  const messages = {
+    'auth/email-already-in-use': 'An account with this email already exists. Please sign in.',
+    'auth/invalid-credential': 'Email or password is incorrect.',
+    'auth/invalid-login-credentials': 'Email or password is incorrect.',
+    'auth/user-not-found': 'Email or password is incorrect.',
+    'auth/wrong-password': 'Email or password is incorrect.',
+    'auth/invalid-email': 'Please enter a valid email address.',
+    'auth/weak-password': 'Please use a stronger password with at least 8 characters.',
+    'auth/too-many-requests': 'Too many attempts. Please wait and try again.',
+    'auth/network-request-failed': 'Cannot reach Firebase. Check your connection and try again.',
+    'auth/operation-not-allowed': 'Email and password sign-in is not enabled in Firebase.',
+  }
+  return messages[issue.code] || 'Authentication could not be completed. Please try again.'
 }
 
-function readUsers() {
-  try {
-    const users = JSON.parse(localStorage.getItem(usersKey) || '[]')
-    if (!Array.isArray(users) || !users.every((user) =>
-      user && typeof user.id === 'string' && typeof user.name === 'string' &&
-      typeof user.email === 'string' && typeof user.salt === 'string' &&
-      typeof user.passwordHash === 'string')) {
-      throw new Error('Invalid accounts')
-    }
-    if (new Set(users.map((user) => user.id)).size !== users.length ||
-      new Set(users.map((user) => user.email)).size !== users.length ||
-      users.some((user) => !user.id || user.id === demoAdmin.id || user.email === demoAdmin.email)) {
-      throw new Error('Invalid account identities')
-    }
-    return users
-  } catch {
-    throw new Error('Cannot read local accounts. Check that browser storage is available and account data is valid.')
+function requireAuth() {
+  if (!authClient || !authApi) throw new Error('Cloud sign-in is unavailable. Check the Firebase configuration and reload.')
+}
+
+// The SDK supplies identity; old browser account data cannot grant a session or role.
+export function getCurrentUser() {
+  const user = authClient?.currentUser
+  if (!user) return null
+  return {
+    id: `firebase:${user.uid}`,
+    name: user.displayName || user.email?.split('@')[0] || 'Member',
+    email: user.email,
+    role: adminUid === user.uid ? 'admin' : 'member',
   }
 }
 
-// PBKDF2 derives a password hash; a different random salt is used for each account.
-// Reference: https://developer.mozilla.org/en-US/docs/Web/API/SubtleCrypto/deriveBits
-async function hashPassword(password, salt) {
-  const encoder = new TextEncoder()
-  const key = await crypto.subtle.importKey(
-    'raw', encoder.encode(password), 'PBKDF2', false, ['deriveBits'],
-  )
-  const bits = await crypto.subtle.deriveBits(
-    { name: 'PBKDF2', salt: encoder.encode(salt), iterations: 600000, hash: 'SHA-256' },
-    key, 256,
-  )
-  return Array.from(new Uint8Array(bits), (byte) => byte.toString(16).padStart(2, '0')).join('')
+// Accept an SDK client here so account tests can use isolated in-memory identities.
+export async function connectAuth(client, api, onChange, onError) {
+  authClient = null
+  authApi = null
+  adminUid = null
+  await api.setPersistence(client, api.browserLocalPersistence)
+  authClient = client
+  authApi = api
+  sessionChanged = onChange
+  return api.onAuthStateChanged(client, async (user) => {
+    adminUid = null
+    try {
+      if (user) {
+        const token = await api.getIdTokenResult(user)
+        if (client.currentUser?.uid !== user.uid) return
+        if (token.claims.admin === true) adminUid = user.uid
+      }
+      if (client.currentUser?.uid !== user?.uid) return
+      onChange()
+    } catch {
+      if (client.currentUser?.uid !== user?.uid) return
+      onChange()
+      onError(new Error('Could not check account permissions. Administrator access is unavailable.'))
+    }
+  }, () => {
+    adminUid = null
+    authClient = null
+    onChange()
+    onError(new Error('Could not restore your cloud session. Reload the page and try again.'))
+  })
 }
 
-function accountDetails(user) {
-  // Registered accounts stay members, even if their stored role field is changed.
-  // This does not make client-side sessions a production security boundary.
-  return { id: user.id, name: user.name, email: user.email, role: user === demoAdmin ? 'admin' : 'member' }
+export async function startAuth(onChange, onError) {
+  const { auth } = await getFirebaseServices()
+  const api = await import('firebase/auth')
+  return connectAuth(auth, api, onChange, onError)
 }
 
 export async function register(name, email, password, confirmation) {
   name = name.trim()
   email = email.trim().toLowerCase()
-  if (name.length < 2 || name.length > 50) {
-    throw new Error('Please enter a name between 2 and 50 characters.')
-  }
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 254) {
-    throw new Error('Please enter a valid email address.')
-  }
-  if (password.trim().length < 8 || password.length > 128) {
-    throw new Error('Please use a password between 8 and 128 characters.')
-  }
-  if (password !== confirmation) {
-    throw new Error('The passwords do not match.')
-  }
-  const users = readUsers()
-  if (email === demoAdmin.email || users.some((user) => user.email === email)) {
-    throw new Error('An account with this email already exists. Please sign in.')
-  }
-  const salt = crypto.randomUUID()
-  const passwordHash = await hashPassword(password, salt)
-  // Read again after the asynchronous hash so another registration is not overwritten.
-  const latestUsers = readUsers()
-  if (latestUsers.some((user) => user.email === email)) {
-    throw new Error('An account with this email already exists. Please sign in.')
-  }
-  const user = { id: crypto.randomUUID(), name, email, salt, passwordHash, role: 'member' }
+  if (name.length < 2 || name.length > 50) throw new Error('Please enter a name between 2 and 50 characters.')
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 254) throw new Error('Please enter a valid email address.')
+  if (password.trim().length < 8 || password.length > 128) throw new Error('Please use a password between 8 and 128 characters.')
+  if (password !== confirmation) throw new Error('The passwords do not match.')
+  requireAuth()
+  let created = false
   try {
-    localStorage.setItem(usersKey, JSON.stringify([...latestUsers, user]))
-  } catch {
-    throw new Error('Could not save your account. Check browser storage and try again.')
+    const result = await authApi.createUserWithEmailAndPassword(authClient, email, password)
+    created = true
+    await authApi.updateProfile(result.user, { displayName: name })
+    sessionChanged()
+    return getCurrentUser()
+  } catch (issue) {
+    if (created) throw new Error('Your account was created, but the name could not be saved. Do not register again; you can sign in with your email.')
+    throw new Error(authMessage(issue))
   }
-  return accountDetails(user)
 }
 
 export async function signIn(email, password) {
-  if (!email.trim() || !password) {
-    throw new Error('Please enter your email and password.')
-  }
-  if (email.length > 254 || password.length > 128) {
-    throw new Error('Email or password is too long.')
-  }
-  const user = [demoAdmin, ...readUsers()].find((item) => item.email === email.trim().toLowerCase())
-  if (!user || await hashPassword(password, user.salt) !== user.passwordHash) {
-    throw new Error('Email or password is incorrect.')
-  }
+  if (!email.trim() || !password) throw new Error('Please enter your email and password.')
+  if (email.length > 254 || password.length > 128) throw new Error('Email or password is too long.')
+  requireAuth()
   try {
-    sessionStorage.setItem(sessionKey, user.id)
-  } catch {
-    throw new Error('Could not start a session. Please enable browser storage.')
+    await authApi.signInWithEmailAndPassword(authClient, email.trim().toLowerCase(), password)
+    sessionChanged()
+    return getCurrentUser()
+  } catch (issue) {
+    throw new Error(authMessage(issue))
   }
-  return accountDetails(user)
 }
 
-export function getCurrentUser() {
-  const id = sessionStorage.getItem(sessionKey)
-  if (!id) return null
-  const user = [demoAdmin, ...readUsers()].find((item) => item.id === id)
-  return user ? accountDetails(user) : null
-}
-
-export function signOut() {
-  sessionStorage.removeItem(sessionKey)
+export async function signOut() {
+  requireAuth()
+  try {
+    await authApi.signOut(authClient)
+    adminUid = null
+    sessionChanged()
+  } catch (issue) {
+    throw new Error(authMessage(issue))
+  }
 }
 
 export function canAccessPage(page, user) {
@@ -127,9 +133,15 @@ export function requireUser() {
   return user
 }
 
+// Read-only old browser data, not a list of Firebase users.
 export function listAccounts() {
-  if (!canAccessPage('admin', getCurrentUser())) {
-    throw new Error('Only an administrator can view local accounts.')
+  if (!canAccessPage('admin', getCurrentUser())) throw new Error('Only an administrator can view local accounts.')
+  try {
+    const users = JSON.parse(localStorage.getItem('cyclewise-users') || '[]')
+    if (!Array.isArray(users) || !users.every((user) => user &&
+      typeof user.id === 'string' && typeof user.name === 'string' && typeof user.email === 'string')) throw new Error('Invalid data')
+    return users.map((user) => ({ id: user.id, name: user.name, email: user.email, role: 'member' }))
+  } catch {
+    throw new Error('Cannot read legacy browser accounts. Existing data has not been changed.')
   }
-  return [demoAdmin, ...readUsers()].map(accountDetails)
 }

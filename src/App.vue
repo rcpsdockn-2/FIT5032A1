@@ -4,7 +4,7 @@ import AccountPanel from './components/AccountPanel.vue'
 import AdminPanel from './components/AdminPanel.vue'
 import GuideRating from './components/GuideRating.vue'
 import DirectoryPanel from './components/DirectoryPanel.vue'
-import { getCurrentUser, canAccessPage } from './services/auth.js'
+import { getCurrentUser, canAccessPage, startAuth } from './services/auth.js'
 import { getSavedItems, toggleSavedItem } from './services/savedItems.js'
 import {
   eventItems,
@@ -25,6 +25,10 @@ const savedGuideIds = ref([])
 const savedEventIds = ref([])
 const savedLoaded = ref(false)
 const mainContent = ref(null)
+const authReady = ref(false)
+const authError = ref('')
+let stopAuth = () => {}
+let mounted = false
 
 const pageAllowed = computed(() => canAccessPage(currentPage.value, currentUser.value))
 const savedGuides = computed(() => recyclingGuides.filter((guide) => savedGuideIds.value.includes(guide.id)))
@@ -62,7 +66,7 @@ async function readPage(event) {
 }
 
 function handleStorage(event) {
-  if (!event.key || event.key === 'cyclewise-users' ||
+  if (!event.key ||
     event.key === `cyclewise-saved-${currentUser.value?.id}`) updateSession()
 }
 
@@ -160,12 +164,29 @@ function saveItem(type, id) {
 }
 
 onMounted(() => {
+  mounted = true
   readPage()
   window.addEventListener('hashchange', readPage)
   window.addEventListener('storage', handleStorage)
+  startAuth(() => {
+    authReady.value = true
+    authError.value = ''
+    updateSession()
+  }, (issue) => {
+    authReady.value = true
+    authError.value = issue.message
+  }).then((unsubscribe) => {
+    if (mounted) stopAuth = unsubscribe
+    else unsubscribe()
+  }).catch((issue) => {
+    authReady.value = true
+    authError.value = issue.message
+  })
 })
 
 onUnmounted(() => {
+  mounted = false
+  stopAuth()
   window.removeEventListener('hashchange', readPage)
   window.removeEventListener('storage', handleStorage)
 })
@@ -200,16 +221,19 @@ onUnmounted(() => {
     </header>
 
     <main id="main-content" ref="mainContent" tabindex="-1">
+      <p v-if="!authReady" class="session-message" role="status">Restoring your cloud session…</p>
+      <p v-if="authError" class="session-message" role="alert">{{ authError }}</p>
       <p v-if="sessionError" class="session-message" role="alert">{{ sessionError }}</p>
       <p v-if="savedMessage" class="session-message" role="status">{{ savedMessage }}</p>
-      <section v-if="!pageAllowed" class="page-content">
+      <section v-if="authReady && !pageAllowed" class="page-content">
         <h1>Page unavailable</h1>
         <p v-if="currentPage === 'admin'">Only an administrator can view this page.</p>
         <p v-else-if="currentPage === 'saved'">Please sign in to view your saved items.</p>
         <p v-else>This page does not exist.</p>
         <a href="#/account">Go to my account</a>
       </section>
-      <AccountPanel v-if="currentPage === 'account'" :current-user="currentUser" @session-change="updateSession" />
+      <AccountPanel v-if="currentPage === 'account'" :current-user="currentUser" :auth-ready="authReady"
+        :auth-error="authError" @session-change="updateSession" />
       <AdminPanel v-if="currentPage === 'admin' && pageAllowed" />
       <DirectoryPanel v-if="currentPage === 'directory' && pageAllowed" />
       <section v-if="currentPage === 'saved' && pageAllowed" class="page-content">
@@ -409,7 +433,7 @@ onUnmounted(() => {
 
     <footer class="site-footer">
       <span>CycleWise Melbourne · Learn, save and rate</span>
-      <span>Sample data · Accounts and ratings stay in this browser</span>
+      <span>Firebase accounts · Saved items and ratings stay in this browser</span>
     </footer>
   </div>
 </template>
