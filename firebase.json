@@ -1,8 +1,22 @@
 {
   "functions": [{
     "source": "functions", "codebase": "directory", "runtime": "nodejs22",
-    "ignore": ["node_modules", ".git", "*.log", ".env", ".env.*", "*.local"]
+    "ignore": ["node_modules", ".git", "*.log", ".env", ".env.*", ".secret.*", "*.local"]
   }],
+  "hosting": {
+    "public": "dist",
+    "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
+    "predeploy": ["npm run build"],
+    "rewrites": [
+      { "source": "/functions/searchPlaces", "function": { "functionId": "searchPlaces", "region": "australia-southeast1" } },
+      { "source": "/api/send-email", "function": { "functionId": "sendEmail", "region": "australia-southeast1" } }
+    ],
+    "headers": [
+      { "source": "/assets/**", "headers": [{ "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }] },
+      { "source": "/index.html", "headers": [{ "key": "Cache-Control", "value": "no-cache" }] },
+      { "source": "**", "headers": [{ "key": "X-Content-Type-Options", "value": "nosniff" }, { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" }] }
+    ]
+  },
   "emulators": {
     "functions": { "host": "127.0.0.1", "port": 5001 },
     "hub": { "host": "127.0.0.1", "port": 4400 },

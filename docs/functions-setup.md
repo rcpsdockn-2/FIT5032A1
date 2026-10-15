@@ -16,24 +16,28 @@ From the repository root:
 
 1. `npm ci`
 2. `npm ci --prefix functions`
-3. `npm run dev:functions` in a separate terminal.
-4. `npm run dev` in another terminal; open its displayed address.
-5. Go to **Places & events → Find a sample place**.
-6. Select **E-waste** and type **Footscray**. Search returns one sample place.
-7. Change category to **Repair** with the same suburb. Search returns no matches.
-8. Stop the emulator and search again: an error appears, not fake local results.
+3. Copy `functions/.secret.example` to `functions/.secret.local` (fake key only).
+   Copy `functions/.env.example` to `functions/.env.local` and use a fake recipient,
+   such as `member@example.com`. These overrides are for the demo emulator only.
+4. `npm run dev:functions` in a separate terminal.
+5. `npm run dev` in another terminal; open its displayed address.
+6. Go to **Places & events → Find a sample place**.
+7. Select **E-waste** and type **Footscray**. Search returns one sample place.
+8. Change category to **Repair** with the same suburb. Search returns no matches.
+9. Stop the emulator and search again: an error appears, not fake local results.
 
 The CLI is installed in this project's development dependencies, not globally.
 Only Functions is emulated; Java is not needed for this configuration. The scripts
 use `demo-cyclewise`, not the live Firebase project, and bind to `127.0.0.1`.
 No sign-in, billing change or deployment is performed by these scripts. Firebase
-may report credentials already present on your machine; this function never
-initializes Admin or calls a non-emulated service. Do not add production API
-access to this demo function without reviewing its environment.
+may report credentials already present on your machine; `searchPlaces` never
+initializes Admin or calls a non-emulated service. `sendEmail` is also exported,
+but these emulator checks only send unsigned requests that cannot send mail.
+Use the fake secret override so the emulator never fetches the live sending key.
 
 The target runtime is Node 22. A newer local Node may produce an engine/runtime
-warning and be used by the emulator instead. Current local checks use Node 24;
-that does not certify the future deployed Node 22 environment.
+warning and be used by the emulator instead. Local checks use Node 24; cloud
+deployment uses Node 22 and needs its own online checks.
 
 ## Tests
 
@@ -47,11 +51,10 @@ that does not certify the future deployed Node 22 environment.
 
 ## Production is a separate step
 
-This round supplies local integration, not a deployed cloud function. Firebase
-requires a Blaze billing plan to deploy Functions. Do not upgrade billing or run
-deployment commands without approval; a maximum instance setting is not a hard
-spending cap. E.1 production availability remains pending until deployment and
-online checks are complete.
+Firebase requires a Blaze billing plan to deploy Functions. Deployment and
+verification instructions are in `docs/deployment.md`; a maximum instance setting
+is not a hard spending cap. The independent `searchPlaces` function remains
+separate from the `sendEmail` function, although both share one deployment folder.
 
 Vite's development proxy sends `/functions/searchPlaces` to the local emulator.
 Production **never** falls back to localhost. Set `VITE_PLACES_FUNCTION_URL` to a

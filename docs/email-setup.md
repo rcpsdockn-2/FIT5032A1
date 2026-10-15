@@ -44,11 +44,13 @@ TXT encoding and PDF header are checked, but this is not a malware scanner.
 inbox delivery and opening the attachment remain a separate manual acceptance
 check. Missing configuration returns 503 instead of pretending to send.
 
-`api/send-email.js` is an HTTP handler shared by the local server and a future
-compatible Node serverless host. Uploading only Vite's `dist` directory does not
-deploy this API. Production hosting and server environment variables must be
-configured and tested separately; no deployment is performed by these scripts.
-This mail handler is not the independent Firebase Cloud Function requirement.
+`functions/emailHttp.js` supplies the HTTP adapter used by both the local
+`api/send-email.js` entry point and the Firebase `sendEmail` export. Validation and
+the send workflow are shared, not copied. The browser imports only the pure
+`functions/emailValidation.js` rules, never the HTTP handler or sending key.
+Production Hosting rewrites `/api/send-email` to that function. Follow
+`docs/deployment.md` for server configuration, Secret Manager and online checks.
+The independent directory function `searchPlaces` remains a separate export.
 
 References:
 - https://resend.com/docs/api-reference/emails/send-email

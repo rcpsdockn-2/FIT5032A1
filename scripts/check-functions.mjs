@@ -25,4 +25,7 @@ for (const query of ['?category=Invalid', '?suburb=' + 'a'.repeat(61), '?categor
   assert.equal((await get(query)).status, 400)
 }
 assert.equal((await fetch(endpoint, { method: 'POST' })).status, 405)
+const mailEndpoint = endpoint.replace(/searchPlaces$/, 'sendEmail')
+assert.equal((await fetch(mailEndpoint)).status, 405)
+assert.equal((await fetch(mailEndpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' })).status, 401)
 console.log('Functions emulator: all places, category/suburb search, no results, invalid parameters and method checks passed.')
