@@ -122,7 +122,7 @@ export async function signOut() {
 
 export function canAccessPage(page, user) {
   if (page === 'learn' || page === 'account' || page === 'directory') return true
-  if (page === 'saved') return Boolean(user)
+  if (page === 'saved' || page === 'email') return Boolean(user)
   if (page === 'admin') return user?.role === 'admin'
   return false
 }

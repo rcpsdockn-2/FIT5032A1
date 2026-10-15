@@ -4,6 +4,7 @@ import AccountPanel from './components/AccountPanel.vue'
 import AdminPanel from './components/AdminPanel.vue'
 import GuideRating from './components/GuideRating.vue'
 import DirectoryPanel from './components/DirectoryPanel.vue'
+import EmailPanel from './components/EmailPanel.vue'
 import { getCurrentUser, canAccessPage, startAuth } from './services/auth.js'
 import { getSavedItems, toggleSavedItem } from './services/savedItems.js'
 import {
@@ -213,6 +214,8 @@ onUnmounted(() => {
           :aria-current="currentPage === 'directory' ? 'page' : undefined">Places &amp; events</a>
         <a v-if="currentUser" class="nav-link" href="#/saved" :class="{ 'nav-link--active': currentPage === 'saved' }"
           :aria-current="currentPage === 'saved' ? 'page' : undefined">My saved</a>
+        <a v-if="currentUser" class="nav-link" href="#/email" :class="{ 'nav-link--active': currentPage === 'email' }"
+          :aria-current="currentPage === 'email' ? 'page' : undefined">Email my notes</a>
         <a v-if="currentUser?.role === 'admin'" class="nav-link" href="#/admin" :class="{ 'nav-link--active': currentPage === 'admin' }"
           :aria-current="currentPage === 'admin' ? 'page' : undefined">Admin</a>
       </nav>
@@ -228,7 +231,7 @@ onUnmounted(() => {
       <section v-if="authReady && !pageAllowed" class="page-content">
         <h1>Page unavailable</h1>
         <p v-if="currentPage === 'admin'">Only an administrator can view this page.</p>
-        <p v-else-if="currentPage === 'saved'">Please sign in to view your saved items.</p>
+        <p v-else-if="currentPage === 'saved' || currentPage === 'email'">Please sign in to use this page.</p>
         <p v-else>This page does not exist.</p>
         <a href="#/account">Go to my account</a>
       </section>
@@ -236,6 +239,7 @@ onUnmounted(() => {
         :auth-error="authError" @session-change="updateSession" />
       <AdminPanel v-if="currentPage === 'admin' && pageAllowed" />
       <DirectoryPanel v-if="currentPage === 'directory' && pageAllowed" />
+      <EmailPanel v-if="currentPage === 'email' && pageAllowed" :key="currentUser.id" :current-user="currentUser" />
       <section v-if="currentPage === 'saved' && pageAllowed" class="page-content">
         <p class="eyebrow">{{ currentUser.name }} · My collection</p>
         <h1>My saved items</h1>
