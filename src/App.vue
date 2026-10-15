@@ -60,6 +60,8 @@ async function readPage(event) {
   updateSession()
   if (window.location.hash === '#main-content') return
   currentPage.value = window.location.hash.replace('#/', '') || 'learn'
+  const titles = { learn: 'Learn & act', account: 'My account', directory: 'Places & events', saved: 'My saved items', email: 'Email my notes', admin: 'Legacy browser accounts' }
+  document.title = `${titles[currentPage.value] || 'Page unavailable'} - CycleWise Melbourne`
   if (event?.type === 'hashchange') {
     await nextTick()
     mainContent.value?.focus()
@@ -107,11 +109,13 @@ function handleSearch() {
 
   if (!search) {
     searchError.value = 'Please enter an item, such as batteries or glass.'
+    document.getElementById('item-search')?.focus()
     return
   }
 
   if (search.length < 2) {
     searchError.value = 'Please enter at least 2 characters to search.'
+    document.getElementById('item-search')?.focus()
     return
   }
 
@@ -364,6 +368,7 @@ onUnmounted(() => {
                       class="secondary-button"
                       type="button"
                       :aria-pressed="isGuideSaved(guide.id)"
+                      :aria-label="`${!currentUser ? 'Sign in to save' : isGuideSaved(guide.id) ? 'Saved' : 'Save guide'}: ${guide.title}`"
                       @click="toggleSavedGuide(guide.id)"
                     >
                       {{ !currentUser ? 'Sign in to save' : isGuideSaved(guide.id) ? 'Saved' : 'Save guide' }}
@@ -403,6 +408,7 @@ onUnmounted(() => {
                     class="text-button"
                     type="button"
                     :aria-pressed="isEventSaved(event.id)"
+                    :aria-label="`${!currentUser ? 'Sign in to save' : isEventSaved(event.id) ? 'Saved' : 'Save place'}: ${event.title}`"
                     @click="toggleSavedEvent(event.id)"
                   >
                     {{ !currentUser ? 'Sign in to save' : isEventSaved(event.id) ? 'Saved' : 'Save place' }}
@@ -438,6 +444,17 @@ onUnmounted(() => {
     <footer class="site-footer">
       <span>CycleWise Melbourne · Learn, save and rate</span>
       <span>Firebase accounts · Saved items and ratings stay in this browser</span>
+      <details class="site-map">
+        <summary>Site map &amp; accessibility</summary>
+        <ul>
+          <li><a href="#/learn">Learn &amp; act: recycling guides</a></li>
+          <li><a href="#/directory">Places &amp; events: search, tables and exports</a></li>
+          <li><a href="#/account">My account: sign in or register</a></li>
+          <li><a href="#/saved">My saved items (sign-in required)</a></li>
+          <li><a href="#/email">Email my notes (sign-in required)</a></li>
+        </ul>
+        <p>Use Tab and Shift+Tab to move between controls, and Enter or Space to activate buttons. The first link skips to the main content. You can enlarge text using browser zoom. Map destinations and directions are also provided as text; you do not need to drag or click the map.</p>
+      </details>
     </footer>
   </div>
 </template>

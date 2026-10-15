@@ -66,6 +66,8 @@ async function logout() {
     error.value = issue.message
   } finally {
     busy.value = false
+    await nextTick()
+    feedback.value?.focus()
   }
 }
 
@@ -103,21 +105,21 @@ async function logout() {
         <form class="account-form" novalidate :aria-busy="busy" aria-describedby="account-feedback" @submit.prevent="submitAccount">
           <div v-if="mode === 'register'">
             <label for="account-name">Name</label>
-            <input id="account-name" v-model="name" autocomplete="name" maxlength="50" required :disabled="busy" />
+            <input id="account-name" v-model="name" autocomplete="name" maxlength="50" required :disabled="busy" aria-describedby="account-feedback" />
           </div>
           <div>
             <label for="account-email">Email address</label>
-            <input id="account-email" v-model="email" type="email" autocomplete="username" maxlength="254" required :disabled="busy" />
+            <input id="account-email" v-model="email" type="email" autocomplete="username" maxlength="254" required :disabled="busy" aria-describedby="account-feedback" />
           </div>
           <div>
             <label for="account-password">Password</label>
             <input id="account-password" v-model="password" type="password" :autocomplete="mode === 'register' ? 'new-password' : 'current-password'"
-              maxlength="128" required :disabled="busy" :aria-describedby="mode === 'register' ? 'password-help' : undefined" />
+              maxlength="128" required :disabled="busy" :aria-describedby="mode === 'register' ? 'password-help account-feedback' : 'account-feedback'" />
             <p v-if="mode === 'register'" id="password-help" class="account-note">Use 8–128 characters.</p>
           </div>
           <div v-if="mode === 'register'">
             <label for="account-confirmation">Confirm password</label>
-            <input id="account-confirmation" v-model="confirmation" type="password" autocomplete="new-password" maxlength="128" required :disabled="busy" />
+            <input id="account-confirmation" v-model="confirmation" type="password" autocomplete="new-password" maxlength="128" required :disabled="busy" aria-describedby="account-feedback" />
           </div>
           <button class="primary-button" type="submit" :disabled="busy || !authReady || Boolean(authError)">
             {{ busy ? 'Please wait…' : mode === 'register' ? 'Register' : 'Sign in to CycleWise' }}

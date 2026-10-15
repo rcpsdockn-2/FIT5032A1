@@ -71,7 +71,7 @@ onUnmounted(() => window.removeEventListener('storage', handleStorage))
       </div>
       <p class="card-note">One rating per account. You can change it later.</p>
     </form>
-    <p v-else><a href="#/account">Sign in to rate this guide</a></p>
+    <p v-else><a href="#/account" :aria-label="`Sign in to rate this guide: ${guideId}`">Sign in to rate this guide</a></p>
     <p v-if="error" :id="`rating-error-${guideId}`" class="form-message form-message--error" role="alert">{{ error }}</p>
     <p v-if="message" class="form-message" role="status">{{ message }}</p>
     <p class="card-note">Ratings are shared only within this browser, not across devices.</p>

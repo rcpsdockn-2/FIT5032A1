@@ -1,0 +1,30 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Local accessibility check</title></head>
+<body><h1>Local accessibility check</h1><p>Only for local testing. No data is uploaded.</p>
+<label for="route">Page</label><select id="route"><option>learn</option><option>directory</option><option>account</option><option>saved</option><option>email</option></select>
+<button id="navigate">Open page</button><button id="scan">Check WCAG 2.1 A/AA</button>
+<label for="width">Frame width</label><input id="width" type="number" value="1200"><button id="resize">Resize</button>
+<button id="spacing">Toggle enlarged text and spacing</button>
+<pre id="result" role="status" style="max-height:180px;overflow:auto"></pre><iframe title="App under test" id="app" src="/#/learn" style="width:1200px;height:900px;border:1px solid black"></iframe>
+<script src="/node_modules/axe-core/axe.min.js"></script><script>
+const frame = document.getElementById('app');
+document.getElementById('navigate').onclick = () => { frame.src = '/#/' + document.getElementById('route').value; };
+document.getElementById('resize').onclick = () => { frame.style.width = document.getElementById('width').value + 'px'; };
+document.getElementById('spacing').onclick = () => {
+  const existing = frame.contentDocument.getElementById('spacing-check');
+  if (existing) { existing.remove(); return; }
+  const style = frame.contentDocument.createElement('style');
+  style.id = 'spacing-check';
+  style.textContent = 'html{font-size:200% !important} *{line-height:1.5 !important;letter-spacing:.12em !important;word-spacing:.16em !important} p{margin-bottom:2em !important}';
+  frame.contentDocument.head.append(style);
+};
+document.getElementById('scan').onclick = async () => {
+  document.getElementById('result').textContent = 'Checking…';
+  const script = frame.contentDocument.createElement('script');
+  script.src = '/node_modules/axe-core/axe.min.js';
+  script.onload = async () => {
+    const result = await frame.contentWindow.axe.run(frame.contentDocument, {runOnly:{type:'tag',values:['wcag2a','wcag2aa','wcag21a','wcag21aa']}});
+    document.getElementById('result').textContent = JSON.stringify({url:frame.contentWindow.location.href, violations:result.violations.map(v=>({id:v.id,impact:v.impact,description:v.description,nodes:v.nodes.map(n=>({target:n.target,html:n.html,summary:n.failureSummary}))})),passes:result.passes.length,incomplete:result.incomplete.map(v=>({id:v.id,nodes:v.nodes.map(n=>({html:n.html,summary:n.failureSummary}))}))},null,2);
+  };
+  frame.contentDocument.head.append(script);
+};
+</script></body></html>

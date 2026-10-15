@@ -103,7 +103,8 @@ onUnmounted(() => {
     <h3 id="sample-map-title">Sample place map &amp; directions</h3>
     <p>Markers use approximate suburb centres, not real recycling facilities. Routes are driving demonstrations only, not live navigation.</p>
     <p>OpenStreetMap loads map tiles; OSRM/FOSSGIS receives the selected public start and destination to calculate the route. No GPS location or account details are sent.</p>
-    <div ref="canvas" class="map-canvas" role="region" aria-label="Interactive sample place map"></div>
+    <p id="map-help">Keyboard: Tab to the map and use arrow keys to pan, or use the place buttons below instead. All destinations and directions are also available as text.</p>
+    <div ref="canvas" class="map-canvas" role="region" aria-label="Interactive sample place map" aria-describedby="map-help"></div>
     <p v-if="tileError" class="form-message form-message--error" role="alert">Some map tiles could not load. You can still select a place from the list below.</p>
     <p class="map-credit">Routes: <a href="https://project-osrm.org/" target="_blank" rel="noreferrer">OSRM</a> / <a href="https://routing.openstreetmap.de/about.html" target="_blank" rel="noreferrer">FOSSGIS</a>, using OpenStreetMap data. <a href="https://www.openstreetmap.org/fixthemap" target="_blank" rel="noreferrer">Report a map issue</a>.</p>
     <ul class="map-place-list">
@@ -118,7 +119,7 @@ onUnmounted(() => {
         <option value="">Choose a start</option>
         <option v-for="item in routeOrigins" :key="item.id" :value="item.id">{{ item.name }}</option>
       </select>
-      <p>Destination: {{ selected ? `${selected.name} (${selected.suburb}, sample)` : 'Choose a place above or click a map marker.' }}</p>
+      <p role="status">Destination: {{ selected ? `${selected.name} (${selected.suburb}, sample)` : 'Choose a place above or click a map marker.' }}</p>
       <button type="button" class="primary-button" :disabled="busy" @click="findRoute">{{ busy ? 'Finding route…' : 'Get driving directions' }}</button>
     </div>
     <div ref="feedback" tabindex="-1">
@@ -144,6 +145,8 @@ onUnmounted(() => {
 .route-steps li { margin-bottom: 10px; overflow-wrap: anywhere; }
 .map-credit { font-size: 0.85rem; margin: 12px 0; }
 .map-canvas :deep(.leaflet-control-attribution) { max-width: 100%; white-space: normal; }
+.map-canvas :deep(.leaflet-control-attribution) { color: #17344b; background: white; }
+.map-canvas :deep(.leaflet-control-attribution a) { color: #235d8d; }
 .map-canvas :deep(.leaflet-control-zoom a) { width: 44px; height: 44px; line-height: 44px; }
 @media (max-width: 620px) { .map-canvas { height: 300px; } }
 </style>

@@ -1,14 +1,14 @@
 :root {
   --navy: #17344b;
-  --blue: #347bb7;
+  --blue: #235d8d;
   --blue-dark: #235d8d;
   --blue-soft: #eaf3fb;
   --blue-pale: #f7fbfe;
   --green: #2f776b;
-  --gold: #a97816;
+  --gold: #805b0c;
   --ink: #213746;
   --muted: #61717c;
-  --line: #c9d8e2;
+  --line: #71838f;
   --white: #ffffff;
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   color: var(--ink);
@@ -23,12 +23,14 @@
 }
 
 body {
-  min-width: 320px;
+  min-width: 0;
   margin: 0;
 }
 
 button,
-input {
+input,
+select,
+textarea {
   font: inherit;
 }
 
@@ -36,12 +38,13 @@ button {
   cursor: pointer;
 }
 
-button:focus-visible,
-a:focus-visible,
-input:focus-visible {
-  outline: 3px solid #e5b84a;
+*:focus-visible {
+  outline: 3px solid #17344b;
   outline-offset: 3px;
 }
+
+.site-header a:focus-visible { outline-color: white; }
+a { color: var(--blue-dark); text-underline-offset: 3px; }
 
 h1,
 h2,
@@ -81,7 +84,7 @@ p {
 
 .skip-link {
   position: absolute;
-  z-index: 2;
+  z-index: 10000;
   top: -48px;
   left: 16px;
   padding: 10px 14px;
@@ -298,7 +301,7 @@ p {
 }
 
 .search-row input::placeholder {
-  color: #8093a0;
+  color: #526673;
 }
 
 .primary-button,
@@ -610,7 +613,7 @@ button:disabled {
   justify-content: space-between;
   gap: 16px;
   padding: 20px 34px;
-  color: #6e818d;
+  color: #526673;
   background: #f2f7fa;
   border-top: 1px solid var(--line);
   font-size: 0.76rem;
@@ -630,7 +633,8 @@ button:disabled {
   }
 
   .nav-link {
-    white-space: nowrap;
+    white-space: normal;
+    max-width: 100%;
   }
 
   .prototype-label {
@@ -789,7 +793,7 @@ button,
 
 select:focus-visible,
 #account-feedback:focus-visible {
-  outline: 3px solid #307ab0;
+  outline: 3px solid #17344b;
   outline-offset: 3px;
 }
 
@@ -807,4 +811,21 @@ select:focus-visible,
   background: white;
   color: #173346;
   font: inherit;
+}
+
+input::placeholder, textarea::placeholder { color: #526673; opacity: 1; }
+input, select, textarea { border-color: #71838f !important; }
+.page-content, .site-footer, .card-meta, .feed-card__topline, .feed-card__footer { overflow-wrap: anywhere; }
+.card-meta, .feed-card__topline, .feed-card__footer, .card-actions { flex-wrap: wrap; }
+.main-nav, .site-footer { flex-wrap: wrap; }
+.primary-button, .secondary-button { white-space: normal; }
+.site-map { flex-basis: 100%; }
+.site-map summary { cursor: pointer; padding: 12px 0; font-weight: 700; }
+.site-map li { margin: 10px 0; }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition: none !important; animation: none !important; scroll-behavior: auto !important; }
+}
+@media (forced-colors: active) {
+  button, input, select, textarea, .nav-link { border: 1px solid ButtonText; }
+  :focus-visible { outline: 3px solid Highlight; }
 }

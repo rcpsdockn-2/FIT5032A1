@@ -1,6 +1,7 @@
 <script setup>
 import { computed, ref } from 'vue'
 import { filterAndSortRows, paginateRows } from '../services/tableData.js'
+import { createCsv, createPrintReport, downloadCsv, openPrintReport } from '../services/exportData.js'
 
 const props = defineProps({
   rows: { type: Array, required: true },
@@ -19,6 +20,8 @@ const filters = ref(emptyFilters())
 const sortKey = ref('')
 const sortDirection = ref('ascending')
 const page = ref(1)
+const exportNotice = ref('')
+const exportError = ref('')
 const matchingRows = computed(() => filterAndSortRows(
   props.rows, filters.value, sortKey.value, sortDirection.value,
 ))
@@ -37,6 +40,20 @@ function resetTable() {
   sortDirection.value = 'ascending'
   page.value = 1
 }
+
+function exportRows(format) {
+  exportNotice.value = ''
+  exportError.value = ''
+  try {
+    if (format === 'csv') {
+      downloadCsv(`cyclewise-${props.tableId}.csv`, createCsv(matchingRows.value, props.columns))
+      exportNotice.value = `CSV download started: ${matchingRows.value.length} matching entries.`
+    } else {
+      openPrintReport(createPrintReport(props.title, matchingRows.value, props.columns))
+      exportNotice.value = 'Report opened in a new tab. Use Print / Save as PDF there.'
+    }
+  } catch (issue) { exportError.value = issue.message }
+}
 </script>
 
 <template>
@@ -51,6 +68,13 @@ function resetTable() {
       </div>
     </div>
     <button type="button" class="secondary-button" @click="resetTable">Reset {{ title.toLowerCase() }}</button>
+    <div class="export-actions" role="group" :aria-label="`Export ${title.toLowerCase()}`">
+      <button type="button" class="secondary-button" :disabled="!matchingRows.length" @click="exportRows('csv')">Export {{ title.toLowerCase() }} CSV</button>
+      <button type="button" class="secondary-button" :disabled="!matchingRows.length" @click="exportRows('pdf')">Print / PDF {{ title.toLowerCase() }} (new tab)</button>
+    </div>
+    <p class="account-note">Exports include all matching rows in the current sort order, not just this page. PDF uses your browser's print dialog.</p>
+    <p role="status">{{ exportNotice }}</p>
+    <p v-if="exportError" class="form-message form-message--error" role="alert">{{ exportError }}</p>
     <div class="table-scroll" tabindex="0" role="region" :aria-label="`${title} table`">
       <table class="directory-table">
         <caption>{{ pageData.total }} of {{ rows.length }} sample entries · 10 rows per page</caption>
@@ -96,6 +120,7 @@ function resetTable() {
   gap: 12px;
   margin: 16px 0;
 }
+.export-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 12px; }
 .table-filters label {
   display: block;
   margin-bottom: 6px;

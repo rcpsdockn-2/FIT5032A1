@@ -86,7 +86,7 @@ async function send() {
         <div><label for="email-message">Message</label>
           <textarea id="email-message" v-model="message" rows="6" maxlength="3000" required :disabled="busy" aria-describedby="email-feedback" @input="changed"></textarea></div>
         <div><label for="email-file">Attachment (optional)</label>
-          <input id="email-file" ref="fileInput" type="file" accept=".txt,.pdf" :disabled="busy" aria-describedby="email-file-help" @change="changed" />
+          <input id="email-file" ref="fileInput" type="file" accept=".txt,.pdf" :disabled="busy" aria-describedby="email-file-help email-feedback" @change="changed" />
           <p id="email-file-help" class="account-note">TXT or PDF, non-empty, maximum 1 MB. Use a simple English filename.</p></div>
         <button type="submit" class="primary-button" :disabled="busy">{{ busy ? 'Sending…' : 'Send email' }}</button>
       </form>
