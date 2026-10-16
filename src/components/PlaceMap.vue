@@ -35,11 +35,9 @@ function selectPlace(place) {
 function drawMarkers() {
   markerLayer.clearLayers()
   for (const place of props.places) {
-    const label = document.createElement('span')
-    label.textContent = `${place.name} (sample)`
     L.circleMarker([place.lat, place.lng], { radius: selectedId.value === place.id ? 12 : 8,
       color: selectedId.value === place.id ? '#8a4e00' : '#235d8d', fillOpacity: 0.85 })
-      .bindTooltip(label).on('click', () => selectPlace(place)).addTo(markerLayer)
+      .on('click', () => selectPlace(place)).addTo(markerLayer)
   }
 }
 
@@ -65,9 +63,7 @@ async function findRoute() {
     if (controller.signal.aborted) return
     route.value = result
     const line = L.polyline(result.line, { color: '#7b3fb2', weight: 5 }).addTo(routeLayer)
-    const label = document.createElement('span')
-    label.textContent = `Start: ${origin.name}`
-    L.circleMarker([origin.lat, origin.lng], { radius: 9, color: '#236d43', fillOpacity: 1 }).bindTooltip(label).addTo(routeLayer)
+    L.circleMarker([origin.lat, origin.lng], { radius: 9, color: '#236d43', fillOpacity: 1 }).addTo(routeLayer)
     map.fitBounds(line.getBounds(), { padding: [28, 28] })
   } catch (issue) {
     if (!controller.signal.aborted) error.value = issue.message

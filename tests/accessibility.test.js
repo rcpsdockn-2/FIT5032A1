@@ -28,3 +28,18 @@ test('form borders and focus colour meet 3:1 against their adjacent surfaces', (
     assert.ok(contrast(colour('navy'), colour(background)) >= 3)
   }
 })
+
+test('navigation, placeholder, feedback and numbered labels retain text contrast', () => {
+  for (const [text, background] of [
+    ['#d9e7ef', colour('navy')], ['#526673', colour('white')],
+    ['#9b4c27', colour('white')], [colour('green'), colour('blue-pale')],
+    [colour('blue-dark'), '#d7e9f5'],
+  ]) assert.ok(contrast(text, background) >= 4.5, `${text} on ${background}`)
+})
+
+test('map names remain in persistent text instead of hover-only tooltips', () => {
+  const map = readFileSync(new URL('../src/components/PlaceMap.vue', import.meta.url), 'utf8')
+  assert.doesNotMatch(map, /bindTooltip/)
+  assert.match(map, /Show \{\{ place.name \}\} on map/)
+  assert.match(map, /route\.steps/)
+})

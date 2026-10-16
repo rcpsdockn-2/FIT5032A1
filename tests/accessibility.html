@@ -3,27 +3,48 @@
 <label for="route">Page</label><select id="route"><option>learn</option><option>directory</option><option>account</option><option>saved</option><option>email</option></select>
 <button id="navigate">Open page</button><button id="scan">Check WCAG 2.1 A/AA</button>
 <label for="width">Frame width</label><input id="width" type="number" value="1200"><button id="resize">Resize</button>
-<button id="spacing">Toggle enlarged text and spacing</button>
+<button id="enlarge" aria-pressed="false">Toggle 200% text</button>
+<button id="spacing" aria-pressed="false">Toggle text spacing</button>
 <pre id="result" role="status" style="max-height:180px;overflow:auto"></pre><iframe title="App under test" id="app" src="/#/learn" style="width:1200px;height:900px;border:1px solid black"></iframe>
 <script src="/node_modules/axe-core/axe.min.js"></script><script>
 const frame = document.getElementById('app');
-document.getElementById('navigate').onclick = () => { frame.src = '/#/' + document.getElementById('route').value; };
+document.getElementById('navigate').onclick = () => {
+  for (const id of ['enlarge','spacing']) {
+    frame.contentDocument.getElementById(id + '-check')?.remove();
+    document.getElementById(id).setAttribute('aria-pressed','false');
+  }
+  frame.src = '/#/' + document.getElementById('route').value;
+};
 document.getElementById('resize').onclick = () => { frame.style.width = document.getElementById('width').value + 'px'; };
-document.getElementById('spacing').onclick = () => {
-  const existing = frame.contentDocument.getElementById('spacing-check');
+function toggleStyle(buttonId, rules) {
+  const button = document.getElementById(buttonId);
+  const existing = frame.contentDocument.getElementById(buttonId + '-check');
+  button.setAttribute('aria-pressed', String(!existing));
   if (existing) { existing.remove(); return; }
   const style = frame.contentDocument.createElement('style');
-  style.id = 'spacing-check';
-  style.textContent = 'html{font-size:200% !important} *{line-height:1.5 !important;letter-spacing:.12em !important;word-spacing:.16em !important} p{margin-bottom:2em !important}';
+  style.id = buttonId + '-check';
+  style.textContent = rules;
   frame.contentDocument.head.append(style);
-};
+}
+document.getElementById('enlarge').onclick = () => toggleStyle('enlarge', 'html{font-size:200% !important}');
+document.getElementById('spacing').onclick = () => toggleStyle('spacing', '*{line-height:1.5 !important;letter-spacing:.12em !important;word-spacing:.16em !important} p{margin-bottom:2em !important}');
 document.getElementById('scan').onclick = async () => {
   document.getElementById('result').textContent = 'Checking…';
   const script = frame.contentDocument.createElement('script');
   script.src = '/node_modules/axe-core/axe.min.js';
   script.onload = async () => {
     const result = await frame.contentWindow.axe.run(frame.contentDocument, {runOnly:{type:'tag',values:['wcag2a','wcag2aa','wcag21a','wcag21aa']}});
-    document.getElementById('result').textContent = JSON.stringify({url:frame.contentWindow.location.href, violations:result.violations.map(v=>({id:v.id,impact:v.impact,description:v.description,nodes:v.nodes.map(n=>({target:n.target,html:n.html,summary:n.failureSummary}))})),passes:result.passes.length,incomplete:result.incomplete.map(v=>({id:v.id,nodes:v.nodes.map(n=>({html:n.html,summary:n.failureSummary}))}))},null,2);
+    const doc = frame.contentDocument;
+    const ids = [...doc.querySelectorAll('[id]')].map(element => element.id);
+    const duplicateIds = ids.filter((id, index) => ids.indexOf(id) !== index);
+    const missingReferences = [...doc.querySelectorAll('[aria-labelledby],[aria-describedby]')].flatMap(element =>
+      ['aria-labelledby','aria-describedby'].flatMap(attribute => (element.getAttribute(attribute) || '').split(/\s+/).filter(id => id && !doc.getElementById(id))));
+    const checks = {width:doc.documentElement.clientWidth,scrollWidth:doc.documentElement.scrollWidth,
+      fontSize:frame.contentWindow.getComputedStyle(doc.documentElement).fontSize,
+      enlargedText:Boolean(doc.getElementById('enlarge-check')),textSpacing:Boolean(doc.getElementById('spacing-check')),duplicateIds,missingReferences,
+      positiveTabIndexes:doc.querySelectorAll('[tabindex]:not([tabindex="0"]):not([tabindex="-1"])').length,
+      mediaElements:doc.querySelectorAll('audio,video').length};
+    document.getElementById('result').textContent = JSON.stringify({url:frame.contentWindow.location.href,checks, violations:result.violations.map(v=>({id:v.id,impact:v.impact,description:v.description,nodes:v.nodes.map(n=>({target:n.target,html:n.html,summary:n.failureSummary}))})),passes:result.passes.length,incomplete:result.incomplete.map(v=>({id:v.id,nodes:v.nodes.map(n=>({html:n.html,summary:n.failureSummary}))}))},null,2);
   };
   frame.contentDocument.head.append(script);
 };
